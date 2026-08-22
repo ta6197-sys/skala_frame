@@ -69,6 +69,23 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+
+  // 과제 8. 스크롤 위치 복원.
+  // 홈은 세로로 긴 화면이라, 아래쪽 도시 카드를 눌러 상세로 갔다가 뒤로가기를 하면
+  // 맨 위로 튀어서 보던 카드를 다시 찾아 내려가야 했다.
+  // savedPosition 은 "뒤로/앞으로" 로 들어왔을 때만 값이 있다. 링크로 새로 들어온 경우엔 null 이라
+  // 그때는 맨 위에서 시작한다.
+  scrollBehavior(to, from, savedPosition) {
+    if (!savedPosition) return { top: 0 }
+
+    // App.vue 의 <Transition mode="out-in"> 이 0.18s 페이드를 돌린다 (practice.css .route-fade-*).
+    // 그동안은 이전 화면이 사라지고 새 화면이 아직 안 그려져서 문서 높이가 짧다.
+    // 그 상태에서 y=1200 으로 스크롤하면 갈 곳이 없어 맨 아래에 걸린다.
+    // 그래서 전환이 끝난 뒤로 한 박자 미룬다. scrollBehavior 는 Promise 를 반환할 수 있다.
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(savedPosition), 200)
+    })
+  },
 })
 
 export default router
