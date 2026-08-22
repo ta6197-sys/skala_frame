@@ -201,135 +201,28 @@ watch(
       :closable="false"
     />
 
-    <!-- 과제 7 추가 : 도시 6곳을 한 줄로 요약. 계산은 weatherStore.summary 가 하고 통계 화면과 공유한다 -->
-    <div v-if="summary" class="summary-row">
-      <el-card class="summary-tile" shadow="never">
-        <!-- el-statistic 의 기본 precision 은 0 이라 24.9 가 25 로 반올림된다. 소수 한 자리를 그대로 보여준다 -->
-        <el-statistic
-          :value="configStore.convertTemp(summary.avgTemp)"
-          :precision="1"
-          :suffix="configStore.unitSymbol"
-        >
-          <template #title>평균 기온</template>
-        </el-statistic>
-      </el-card>
-      <el-card class="summary-tile" shadow="never">
-        <el-statistic :value="summary.avgHumidity" suffix="%">
-          <template #title>평균 습도</template>
-        </el-statistic>
-      </el-card>
-      <el-card
-        class="summary-tile summary-tile-link"
-        shadow="never"
-        @click="handleClickDetail(summary.hottest.id)"
-      >
-        <el-statistic
-          :value="configStore.convertTemp(summary.hottest.temp)"
-          :precision="1"
-          :suffix="configStore.unitSymbol"
-        >
-          <template #title>가장 더운 곳 · {{ summary.hottest.name }}</template>
-        </el-statistic>
-      </el-card>
-      <el-card class="summary-tile" shadow="never">
-        <el-statistic :value="dustBadCount" suffix="곳">
-          <template #title>미세먼지 나쁨</template>
-        </el-statistic>
-      </el-card>
-    </div>
+    <!-- 과제 8-2. 화면 순서를 "찾기 -> 보기 -> 곁들이기" 로 다시 짰다.
+         지금까지는 검색·내 위치·즐겨찾기·최근 본 도시 카드가 먼저 나오고 도시 카드가 맨 아래였다.
+         이 앱을 여는 이유는 도시 날씨를 보는 것이므로 그게 맨 위에 와야 한다.
 
-    <!-- 과제 8. 한 줄짜리 보조 카드 4장을 2x2 격자로 묶었다.
-         세로로 쌓았을 때 438px 를 쓰던 자리다. 내용은 전부 한 줄인데 폭 1106px 를
-         혼자 차지하고 있어서, 아래 도시 카드 그리드가 첫 화면 밖(y=959)으로 밀려나 있었다.
-         카드를 지운 게 아니라 자리만 바꿨다 - 검색(과제 1~3)·내 위치(과제 6)·
-         즐겨찾기/최근 본 도시(과제 5)는 전부 과제 산출물이라 하나도 없애면 안 된다.
-         순서는 검색 > 내 위치 > 즐겨찾기 > 최근 본 도시.
-         조건부(v-if)인 최근 본 도시를 마지막에 둬야 기록이 없을 때 격자가 깔끔하게 3칸이 된다. -->
-    <div class="utility-grid">
-      <!-- 검색박스 : 껍데기는 BaseDashboardCard, 알맹이는 SearchBar 를 slot 으로 주입 -->
-      <BaseDashboardCard>
-        <template v-slot:title>도시 검색 (한글 즉시 동기화)</template>
+         검색은 카드 껍데기를 벗기고 이 카드 안쪽 맨 위에 긴 바 하나로 넣었다.
+         BaseDashboardCard 를 하나 덜 쓰게 되지만(5장 -> 4장) 컴포넌트도 슬롯 인터페이스도
+         그대로 살아 있고 아래 세 카드가 계속 같은 껍데기를 쓴다. SearchBar 의 props/emits 도 그대로다.
+         상자를 한 겹 줄인 만큼 "검색 -> 결과" 가 한 덩어리로 읽힌다. -->
+    <BaseDashboardCard class="board-card">
+      <template v-slot:title>
+        지역별 날씨 현황
+        <!-- 슬롯에 넣은 마크업은 부모(이 파일)의 scoped 스타일이 담당한다.
+             그래서 .title-note 규칙은 이 파일 <style scoped> 안에 있어야 한다.
+             다른 컴포넌트로 옮기면 에러 없이 색만 안 먹는다. -->
+        <span class="title-note">상세보기 → /weather/:cityId</span>
+      </template>
+
+      <!-- 검색 바. 알맹이(SearchBar)는 한 줄도 안 고쳤다.
+           과제 1 요구사항 3 의 :model-value + @input 한글 처리가 그 안에 그대로 있다. -->
+      <div class="search-bar">
         <SearchBar :search-query="searchQuery" @update-query="handleUpdateQuery" />
-      </BaseDashboardCard>
-
-      <!-- 과제 6 추가 : 브라우저 위치 → 역지오코딩으로 한글 지명 → 그 좌표의 실제 날씨 -->
-      <BaseDashboardCard>
-        <template v-slot:title>내 위치 날씨</template>
-        <div v-if="myPlace" class="myplace-row">
-          <div>
-            <p class="myplace-name">{{ myPlace.name }}</p>
-            <p class="myplace-desc">
-              {{ myPlace.temp }}℃ (체감 {{ myPlace.feelsLike }}℃) · {{ myPlace.status }} · 습도
-              {{ myPlace.humidity }}%
-            </p>
-          </div>
-          <el-button size="small" @click="requestMyLocation">다시 확인</el-button>
-        </div>
-        <div v-else class="myplace-row">
-          <p class="myplace-desc">
-            <template v-if="isLocating">위치를 확인하는 중입니다...</template>
-            <template v-else-if="myPlaceError">{{ myPlaceError }}</template>
-            <template v-else
-              >브라우저 위치 권한을 허용하면 지금 있는 곳의 날씨를 보여줍니다.</template
-            >
-          </p>
-          <el-button
-            size="small"
-            type="primary"
-            plain
-            :loading="isLocating"
-            @click="requestMyLocation"
-          >
-            내 위치 확인
-          </el-button>
-        </div>
-      </BaseDashboardCard>
-
-      <!-- 즐겨찾기 요약 : 같은 껍데기를 재사용 -->
-      <BaseDashboardCard>
-        <template v-slot:title>즐겨찾기</template>
-        <div class="favorite-row">
-          <span class="favorite-list">
-            <span v-if="favoritesStore.favoriteCount">
-              {{ favoritesStore.favoriteCities.map((city) => city.name).join(', ') }}
-              ({{ favoritesStore.favoriteCount }}개)
-            </span>
-            <span v-else>카드 왼쪽 체크박스로 즐겨찾기를 등록해 보세요.</span>
-          </span>
-          <el-button
-            size="small"
-            :disabled="favoritesStore.favoriteCount === 0"
-            @click="favoritesStore.clearFavorites"
-          >
-            즐겨찾기 비우기
-          </el-button>
-        </div>
-      </BaseDashboardCard>
-
-      <!-- 과제 5 추가 : 상세 페이지에서 기록해둔 방문 이력을 여기서 꺼내 쓴다 -->
-      <BaseDashboardCard v-if="recentStore.hasRecent">
-        <template v-slot:title>최근 본 도시</template>
-        <div class="recent-row">
-          <el-tag
-            v-for="city in recentStore.recentCities"
-            :key="city.id"
-            class="recent-chip"
-            effect="plain"
-            round
-            @click="handleClickDetail(city.id)"
-          >
-            {{ city.name }}
-          </el-tag>
-          <el-button link type="info" class="recent-clear" @click="recentStore.clearRecent">
-            기록 지우기
-          </el-button>
-        </div>
-      </BaseDashboardCard>
-    </div>
-
-    <!-- 리스트박스 : 같은 껍데기 안에 WeatherCard 를 v-for 로 주입 -->
-    <BaseDashboardCard>
-      <template v-slot:title>지역별 날씨 현황 (상세보기 → /weather/:cityId 이동)</template>
+      </div>
 
       <!-- 과제 7 : 스켈레톤도 카드 그리드와 같은 격자에 깐다.
            과제 6 의 el-skeleton :rows="4" 는 실제 카드 모양과 안 닮아서 로딩→완료 때 화면이 튀었다. -->
@@ -368,6 +261,125 @@ watch(
         </div>
       </template>
     </BaseDashboardCard>
+
+    <!-- 여기서부터는 곁들이는 정보. 위의 본체와 눈으로 끊어준다. -->
+    <div class="section-divider" role="presentation"></div>
+
+    <!-- 과제 7 추가 : 도시 6곳을 한 줄로 요약. 계산은 weatherStore.summary 가 하고 통계 화면과 공유한다 -->
+    <div v-if="summary" class="summary-row">
+      <el-card class="summary-tile" shadow="never">
+        <!-- el-statistic 의 기본 precision 은 0 이라 24.9 가 25 로 반올림된다. 소수 한 자리를 그대로 보여준다 -->
+        <el-statistic
+          :value="configStore.convertTemp(summary.avgTemp)"
+          :precision="1"
+          :suffix="configStore.unitSymbol"
+        >
+          <template #title>평균 기온</template>
+        </el-statistic>
+      </el-card>
+      <el-card class="summary-tile" shadow="never">
+        <el-statistic :value="summary.avgHumidity" suffix="%">
+          <template #title>평균 습도</template>
+        </el-statistic>
+      </el-card>
+      <el-card
+        class="summary-tile summary-tile-link"
+        shadow="never"
+        @click="handleClickDetail(summary.hottest.id)"
+      >
+        <el-statistic
+          :value="configStore.convertTemp(summary.hottest.temp)"
+          :precision="1"
+          :suffix="configStore.unitSymbol"
+        >
+          <template #title>가장 더운 곳 · {{ summary.hottest.name }}</template>
+        </el-statistic>
+      </el-card>
+      <el-card class="summary-tile" shadow="never">
+        <el-statistic :value="dustBadCount" suffix="곳">
+          <template #title>미세먼지 나쁨</template>
+        </el-statistic>
+      </el-card>
+    </div>
+
+    <!-- 과제 8-2. 남은 보조 카드 3장. 도시 목록 아래로 내렸다.
+         전부 과제 산출물이라 없애지 않고 자리만 옮긴다 - 내 위치(과제 6),
+         즐겨찾기 / 최근 본 도시(과제 5 본인 추가 스토어의 유일한 노출면). -->
+    <div class="utility-grid">
+        <!-- 과제 6 추가 : 브라우저 위치 → 역지오코딩으로 한글 지명 → 그 좌표의 실제 날씨 -->
+        <BaseDashboardCard>
+          <template v-slot:title>내 위치 날씨</template>
+          <div v-if="myPlace" class="myplace-row">
+            <div>
+              <p class="myplace-name">{{ myPlace.name }}</p>
+              <p class="myplace-desc">
+                {{ myPlace.temp }}℃ (체감 {{ myPlace.feelsLike }}℃) · {{ myPlace.status }} · 습도
+                {{ myPlace.humidity }}%
+              </p>
+            </div>
+            <el-button size="small" @click="requestMyLocation">다시 확인</el-button>
+          </div>
+          <div v-else class="myplace-row">
+            <p class="myplace-desc">
+              <template v-if="isLocating">위치를 확인하는 중입니다...</template>
+              <template v-else-if="myPlaceError">{{ myPlaceError }}</template>
+              <template v-else
+                >브라우저 위치 권한을 허용하면 지금 있는 곳의 날씨를 보여줍니다.</template
+              >
+            </p>
+            <el-button
+              size="small"
+              type="primary"
+              plain
+              :loading="isLocating"
+              @click="requestMyLocation"
+            >
+              내 위치 확인
+            </el-button>
+          </div>
+        </BaseDashboardCard>
+
+        <!-- 즐겨찾기 요약 : 같은 껍데기를 재사용 -->
+        <BaseDashboardCard>
+          <template v-slot:title>즐겨찾기</template>
+          <div class="favorite-row">
+            <span class="favorite-list">
+              <span v-if="favoritesStore.favoriteCount">
+                {{ favoritesStore.favoriteCities.map((city) => city.name).join(', ') }}
+                ({{ favoritesStore.favoriteCount }}개)
+              </span>
+              <span v-else>카드 왼쪽 체크박스로 즐겨찾기를 등록해 보세요.</span>
+            </span>
+            <el-button
+              size="small"
+              :disabled="favoritesStore.favoriteCount === 0"
+              @click="favoritesStore.clearFavorites"
+            >
+              즐겨찾기 비우기
+            </el-button>
+          </div>
+        </BaseDashboardCard>
+
+        <!-- 과제 5 추가 : 상세 페이지에서 기록해둔 방문 이력을 여기서 꺼내 쓴다 -->
+        <BaseDashboardCard v-if="recentStore.hasRecent">
+          <template v-slot:title>최근 본 도시</template>
+          <div class="recent-row">
+            <el-tag
+              v-for="city in recentStore.recentCities"
+              :key="city.id"
+              class="recent-chip"
+              effect="plain"
+              round
+              @click="handleClickDetail(city.id)"
+            >
+              {{ city.name }}
+            </el-tag>
+            <el-button link type="info" class="recent-clear" @click="recentStore.clearRecent">
+              기록 지우기
+            </el-button>
+          </div>
+        </BaseDashboardCard>
+    </div>
 
     <div class="status-bar">
       <span v-if="selectedCityInfo">{{ selectedCityInfo.name }}가 선택되었습니다.</span>
@@ -448,16 +460,16 @@ watch(
 .summary-tile-link:hover {
   border-color: var(--c-line-strong);
 }
-/* 과제 8. 보조 카드 4장을 담는 격자.
-   - repeat(2, 1fr) 을 쓴다. auto-fit + minmax 를 쓰면 1106px 폭에서 3열로 떨어져
-     2x2 가 안 나온다. 여기는 칸 수를 내가 정해야 하는 자리라 고정 2열이 맞다.
-   - 아래 .city-grid 의 minmax(280px, 1fr) 은 손대지 않았다. 도시 카드 그리드는 폭이
-     그대로(1106px)라 열 수가 바뀌지 않는다. minmax 하한을 건드리면 가로 스크롤이 다시 생긴다.
+/* 과제 8-2. 보조 카드가 4장 -> 3장이 되면서(검색이 본체 카드 안으로 들어갔다) 3열로 바꿨다.
    - min-width: 0 - 격자 칸의 기본값은 auto 라서, 안쪽에 안 잘리는 긴 문자열이 들어오면
-     칸이 스스로 넓어지며 컨테이너를 밀어낸다. 즐겨찾기 도시 이름이 길어질 때를 대비한다. */
+     칸이 스스로 넓어지며 컨테이너를 밀어낸다. 즐겨찾기 도시 이름이 길어질 때를 대비한다.
+   - "최근 본 도시" 는 v-if 라 기록이 없으면 2장만 남는다. 고정 3열이면 오른쪽 한 칸이
+     빈 채로 남으므로, 여기서는 auto-fit 을 써서 남은 카드가 폭을 나눠 갖게 한다.
+   - minmax 하한 300px 은 1106px 에서 3열(300*3+32=932), 768px 구간에서 2열이 되는 값이다.
+     하한이 컨테이너보다 커지는 폰 구간은 아래 미디어쿼리에서 1fr 로 없앤다. */
 .utility-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
@@ -472,12 +484,70 @@ watch(
   height: 100%;
 }
 
-/* 폰에서는 2열이 들어갈 폭이 안 나온다. 한 줄에 카드 하나씩으로 되돌린다.
-   720px 은 카드 하나가 최소한의 폭(약 330px)을 유지할 수 있는 경계다. */
+/* 폰에서는 여러 열이 들어갈 폭이 안 나온다. 한 줄에 카드 하나씩으로 되돌리면서
+   minmax 하한(300px)도 같이 없앤다. 하한이 컨테이너보다 크면 칸이 밖으로 삐져나온다. */
 @media (max-width: 720px) {
   .utility-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== 과제 8-2. 본체 카드 (검색 바 + 도시 그리드) ===== */
+
+/* 이 카드 하나가 화면의 주인공이다. 나머지(요약 타일·보조 카드 3장)는 아래에서
+   곁들이는 정보라 시각적으로 한 단계 낮다. 그 차이를 여백으로만 준다.
+   면 색이나 그림자를 더 얹지 않는 이유 - base.css 가 "그림자 대신 1px 보더" 로 잡혀 있어서
+   여기만 규칙을 깨면 오히려 겉돈다. */
+.board-card {
+  margin-bottom: var(--space-6);
+}
+
+/* 카드 제목 옆에 붙는 경로 안내. 제목과 같은 크기로 두면 제목이 두 줄처럼 읽혀서
+   한 단계 작고 흐리게 낮춘다. 과제 4 의 동적 라우팅을 화면에 남겨두기 위한 표기다. */
+.title-note {
+  margin-left: var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-regular);
+  color: var(--c-text-faint);
+}
+
+/* 검색 바. 카드 안쪽 맨 위에서 폭을 꽉 채운다.
+   el-input 은 자기 내부(.el-input__wrapper)에서 높이와 반경을 정하므로 :deep 으로 닿아야 한다.
+   SearchBar 쪽 <style scoped> 는 손대지 않았다 - 그쪽은 컴포넌트가 어디에 놓이든 같아야 하는 규칙이고,
+   "이 화면에서 얼마나 큰 바로 보일지" 는 놓는 쪽이 정할 일이다. */
+.search-bar {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--c-line);
+}
+.search-bar :deep(.el-input__wrapper) {
+  padding: 4px 16px;
+  border-radius: var(--radius-m);
+  background-color: var(--c-surface-mute);
+  /* none 이 아니라 "투명한 링" 으로 둔다.
+     el-input 은 box-shadow 에 transition 을 걸어두는데, none -> 링 은 보간 시작값이 없어서
+     전환이 어정쩡하게 끊긴다. 두께를 맞춰두면 색만 바뀌어 깔끔하게 들어온다. */
+  box-shadow: 0 0 0 2px transparent inset;
+}
+.search-bar :deep(.el-input__wrapper:hover) {
+  background-color: var(--c-surface-soft);
+}
+/* 포커스일 때만 브랜드색 링. 평소에 테두리를 그리지 않아서 바가 화면에 묻지 않고 떠 있는다 */
+.search-bar :deep(.el-input__wrapper.is-focus) {
+  background-color: var(--c-surface);
+  box-shadow: 0 0 0 2px var(--c-brand) inset;
+}
+.search-bar :deep(.el-input__inner) {
+  height: 40px;
+  font-size: var(--fs-body);
+}
+
+/* 본체와 곁들이는 정보 사이의 경계. 제목을 하나 더 만들지 않고 선 하나로 끊는다.
+   role="presentation" 을 준 이유 - 이건 순수하게 보기 위한 선이라 스크린리더가 읽을 것이 없다. */
+.section-divider {
+  height: 1px;
+  margin-bottom: var(--space-6);
+  background-color: var(--c-line);
 }
 
 /* .myplace-row 와 같은 이유로 wrap 을 쓰지 않는다 (위 주석 참고). */
