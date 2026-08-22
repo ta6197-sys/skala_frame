@@ -1,0 +1,154 @@
+/* 최상위 컨테이너
+   과제 7. 과제 6 까지는 `max-width: 1200px; width: 800px;` 이었다.
+   width 가 뒤에 와서 max-width 는 아무 일도 하지 않았고, 어떤 화면에서도 본문이 800px 고정이었다.
+   실측하니 뷰포트 800px 에서 scrollWidth 832 / clientWidth 785 로 47px 가로 스크롤이 생겼다.
+   (#app 의 좌우 padding 안쪽에 800px 짜리 고정폭 상자를 넣어서) */
+div.practice-container {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  font-family: var(--font-sans);
+  color: var(--c-text);
+  line-height: var(--lh-base);
+}
+/* 개별 실습 예제 섹션 박스 */
+div.practice-section {
+  padding: 10px 20px 20px 20px;
+  margin-top: 10px;
+  margin-bottom: 24px;
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-m);
+}
+/* 세션 대제목 (h1) 스타일링 */
+h1 {
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin-top: 40px;
+  margin-bottom: 8px;
+}
+/* 세션 중제목 (h2) 스타일링 */
+h2 {
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin-top: 0px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--c-line);
+}
+/* 서브 섹션 소제목 (h3) 스타일링 */
+h3 {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+/* 기존 <hr /> 구분선을 모던한 디자인으로 교체 */
+hr {
+  border: none;
+  height: 1px;
+  background-color: var(--c-line);
+  margin-bottom: var(--space-4);
+}
+
+/* 버튼 태그 기본 스타일 (회색 계통)
+   과제 7. Element Plus 의 el-button 은 자기 클래스(.el-button)로 스타일을 잡으므로
+   이 태그 선택자와 충돌하지 않는다. 라이브러리로 안 바꾼 자리(과제 1~3 화면 등)는 계속 이 스타일을 쓴다. */
+button {
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-text-sub);
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+button:not(:disabled):hover {
+  background-color: var(--c-surface-soft);
+  border-color: var(--c-line-strong);
+  color: var(--c-text);
+}
+button:not(:disabled):active {
+  background-color: var(--c-surface-mute);
+  border-color: var(--c-line-strong);
+}
+button:disabled {
+  background-color: var(--c-surface-soft);
+  border-color: var(--c-line);
+  color: var(--c-text-faint);
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+/* el-button 은 위 규칙의 영향을 받지 않도록 되돌린다 (태그 선택자가 먼저 적용되는 경우 대비) */
+button.el-button {
+  font-weight: 500;
+}
+/* 인풋 태그 기본 스타일 (참고용) */
+input {
+  padding: 6px 10px;
+  font-size: 14px;
+  color: var(--c-text);
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-s);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+input:focus {
+  border-color: var(--c-brand);
+  box-shadow: 0 0 0 3px var(--c-focus);
+}
+/* Element Plus 가 자기 input 을 직접 그리므로 위 규칙에서 빼준다 */
+.el-input input,
+.el-input__inner {
+  border: none;
+  box-shadow: none;
+}
+/* 버튼 스타일: 담백한 플랫 타입 */
+.btn-external {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-on-brand);
+  background-color: var(--c-brand);
+  border: none;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.btn-external:hover {
+  background-color: var(--c-brand-dark);
+}
+.btn-external:active {
+  background-color: var(--c-brand-darker);
+}
+
+/* 과제 7. 라우트 전환 페이드
+   참고 파일 App.vue.exercise 에 RouterView v-slot + KeepAlive 조합이 주석으로 들어 있다.
+   같은 형태에 Transition 만 얹었다. 빌트인이라 라이브러리 추가는 없다. */
+.route-fade-enter-active,
+.route-fade-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.route-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.route-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}

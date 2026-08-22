@@ -1,0 +1,290 @@
+/* ==========================================================================
+   과제 7. 디자인 토큰 (토스 + Vercel 톤)
+   - 참고한 톤: 토스(큰 숫자 + 넓은 여백 + 회색 배경 위 흰 카드),
+     Vercel 대시보드(그림자 대신 1px 보더로 카드를 끊고, 액센트는 한 색만).
+   - 토큰 "이름" 은 과제 6 까지 쓰던 것을 하나도 안 바꿈. 이미 .vue 여러 곳이
+     var(--c-text) / var(--c-line) 형태로 참조하고 있어서, 이름을 바꾸면 화면
+     전체가 한 번에 깨짐. 값만 갈아끼우면 화면 9개가 같이 따라옴.
+   - 색 판단(기온 배지 / 미세먼지 등급 / 게이지)은 --c-hot, --c-good 같은 "의미"
+     토큰이 계속 담당함. 컴포넌트는 hex 를 모르는 상태를 유지함.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 원시 색 (raw palette)
+   - 여기서만 hex 를 씀. 아래 의미 토큰은 전부 이 값을 가리킴.
+   - 회색 9단계는 토스 grey scale 기준으로 잡음. 순수 무채색(#888)이 아니라
+     파랑기를 살짝 머금고 있어서, 파랑 액센트와 같이 놔도 탁해 보이지 않음.
+   -------------------------------------------------------------------------- */
+:root {
+  --g-50: #f9fafb;
+  --g-100: #f2f4f6;
+  --g-200: #e5e8eb;
+  --g-300: #d1d6db;
+  --g-400: #b0b8c1;
+  --g-500: #8b95a1;
+  --g-600: #6b7684;
+  --g-700: #4e5968;
+  --g-800: #333d4b;
+  --g-900: #191f28;
+
+  --blue-500: #3182f6;
+  --blue-600: #1b64da;
+  --blue-700: #1957c2;
+  --blue-50: #ebf3fe;
+
+  --sky-500: #0ea5e9;
+  --red-500: #f04452;
+  --green-500: #15b76d;
+  --amber-500: #f59f0b;
+  --violet-500: #8b5cf6;
+}
+
+/* --------------------------------------------------------------------------
+   2. 브랜드
+   - 과제 6 까지는 Vue 초록(#42b883)이었음. 토스/Vercel 톤은 "무채색 화면 +
+     액센트 한 색" 이 전제라, 회색 위에서 대비가 가장 안정적인 파랑으로 바꿈.
+   - 초록으로 되돌리려면 아래 네 줄의 값만 #42b883 / #33a06f / #2c8a5f / #eafaf1
+     로 바꾸면 됨. 다른 파일은 손댈 필요 없음.
+   -------------------------------------------------------------------------- */
+:root {
+  --c-brand: var(--blue-500);
+  --c-brand-dark: var(--blue-600);
+  --c-brand-darker: var(--blue-700);
+  --c-brand-soft: var(--blue-50);
+  /* 브랜드 배경 위에 얹는 글자색과, 브랜드 배경을 감싸는 테두리색.
+     상태바처럼 "연한 브랜드 배경 + 한 톤 진한 테두리" 조합이 여러 화면에 있어서 토큰으로 뺌. */
+  --c-on-brand: #ffffff;
+  --c-brand-line: #c5dcfd;
+}
+
+/* --------------------------------------------------------------------------
+   3. 판정 색 - 기온 배지 / 미세먼지 등급 / 게이지가 공유함
+   - --c-cool 은 브랜드 파랑과 붙어 보이면 안 되므로 한 칸 밝은 하늘색으로 띄움.
+     배지는 면적이 작아서 채도가 높아도 화면이 시끄러워지지 않음.
+   -------------------------------------------------------------------------- */
+:root {
+  --c-hot: var(--red-500);
+  --c-cool: var(--sky-500);
+  --c-good: var(--green-500);
+  --c-normal: var(--amber-500);
+  --c-bad: var(--violet-500);
+}
+
+/* --------------------------------------------------------------------------
+   4. 텍스트 4단계
+   - 토스 화면의 핵심이 여기임. 본문은 900 이 아니라 700~800 을 쓰고, 900 은
+     숫자·제목처럼 "읽어야 하는 것" 에만 씀. 그래서 큰 숫자가 저절로 튀어나옴.
+   -------------------------------------------------------------------------- */
+:root {
+  --c-text: var(--g-900);
+  --c-text-sub: var(--g-700);
+  --c-text-muted: var(--g-500);
+  --c-text-faint: var(--g-400);
+}
+
+/* --------------------------------------------------------------------------
+   5. 면과 선
+   - Vercel 방식: 카드를 그림자로 띄우지 않고 1px 보더로 끊음. 카드가 화면 9개에
+     수십 장 깔리는 구조라, 그림자를 쓰면 스크롤할 때 화면이 지저분해짐.
+   - --c-page 를 새로 둠. 과제 6 까지는 body 에 #f4f6f8 이 직접 박혀 있어서
+     배경색만 토큰 밖에 남아 있었음.
+   -------------------------------------------------------------------------- */
+:root {
+  --c-page: var(--g-50);
+  --c-surface: #ffffff;
+  --c-surface-soft: var(--g-50);
+  --c-surface-mute: var(--g-100);
+  --c-line: var(--g-200);
+  --c-line-strong: var(--g-300);
+  --c-track: var(--g-100);
+  --c-focus: rgba(49, 130, 246, 0.28);
+}
+
+/* --------------------------------------------------------------------------
+   6. 형태
+   - 반경을 6/8/12 에서 8/12/16 으로 한 단계씩 올림. 토스 톤에서 카드가 부드럽게
+     보이는 이유의 대부분이 반경임.
+   - 그림자는 남기되 값을 거의 0 에 가깝게 낮춤. --shadow-1/2 를 쓰던 기존 4곳이
+     이름을 그대로 두고도 새 톤을 따라오게 하려는 것임(지우면 그 4곳이 깨짐).
+   -------------------------------------------------------------------------- */
+:root {
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(25, 31, 40, 0.04);
+  --shadow-2: 0 4px 16px rgba(25, 31, 40, 0.08);
+
+  --border-1: 1px solid var(--c-line);
+}
+
+/* --------------------------------------------------------------------------
+   7. 간격 - 4px 배수. 7·8 단계는 섹션 사이 여백용으로 새로 추가함.
+   -------------------------------------------------------------------------- */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+}
+
+/* --------------------------------------------------------------------------
+   8. 타이포 스케일
+   - 날씨 앱은 숫자가 주인공인 화면이라 기온용 큰 단계(--fs-display)를 따로 둠.
+   - --font-num 의 tabular-nums 는 기온이 8도 → 21도 로 바뀔 때 숫자 폭이 달라져
+     카드가 미세하게 흔들리는 것을 막아줌. 자동 갱신이 도는 홈에서 특히 티남.
+   - Pretendard 는 설치하지 않음(README3 §9 "새 패키지 추가 안 함" 유지).
+     설치돼 있는 환경이면 잡히고, 없으면 뒤의 시스템 폰트로 자연히 넘어감.
+   -------------------------------------------------------------------------- */
+:root {
+  --fs-display: 44px;
+  --fs-h1: 28px;
+  --fs-h2: 20px;
+  --fs-h3: 17px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-xs: 12px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+
+  --lh-tight: 1.25;
+  --lh-base: 1.6;
+  /* 큰 숫자 전용. --lh-tight(1.25)를 44px 에 곱하면 행간이 55px 이 되어 숫자 아래가
+     허전해진다. 한 줄짜리 기온에는 글자 높이에 붙는 값이 맞다. */
+  --lh-display: 1.1;
+
+  --font-sans:
+    Pretendard, 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Malgun Gothic', 'Apple SD Gothic Neo', 'Helvetica Neue', sans-serif;
+  --font-num: var(--font-sans);
+
+  --dur: 0.18s;
+}
+
+/* --------------------------------------------------------------------------
+   9. create-vue 스캐폴드 잔재 (--vt-c-*, --color-*)
+   - 지우지 않고 위 토큰을 가리키게만 바꿈. 아직 참조하는 곳이 남아 있어서 지우면
+     깨지고, 값을 연결해두면 그쪽도 새 톤을 자동으로 따라옴.
+   - --section-gap: 160px 은 스캐폴드가 준 값인데 쓰는 곳이 없어서 뺌.
+   -------------------------------------------------------------------------- */
+:root {
+  --vt-c-white: var(--c-surface);
+  --vt-c-white-soft: var(--c-surface-soft);
+  --vt-c-white-mute: var(--c-surface-mute);
+  --vt-c-indigo: var(--c-text);
+  --vt-c-divider-light-1: var(--c-line-strong);
+  --vt-c-divider-light-2: var(--c-line);
+  --vt-c-text-light-1: var(--c-text);
+  --vt-c-text-light-2: var(--c-text-muted);
+
+  --color-background: var(--c-page);
+  --color-background-soft: var(--c-surface-soft);
+  --color-background-mute: var(--c-surface-mute);
+  --color-border: var(--c-line);
+  --color-border-hover: var(--c-line-strong);
+  --color-heading: var(--c-text);
+  --color-text: var(--c-text);
+}
+
+/* ==========================================================================
+   10. Element Plus 테마 덮어쓰기
+   - Element Plus 기본 primary 는 #409EFF 로, 새 브랜드 파랑(#3182F6)보다 밝고
+     탁함. 그대로 두면 el-button 과 직접 만든 배지가 미묘하게 다른 파랑이 됨.
+   - 컴포넌트마다 :color 를 넘기는 대신 여기서 변수 한 번만 덮으면 전부 따라옴.
+   - 보더/배경/반경까지 같이 덮는 이유: el-card, el-input 이 자체 회색(#DCDFE6)을
+     쓰는데 이 값이 --c-line 과 달라서, 직접 만든 카드와 나란히 놓으면 선 색이
+     두 종류로 보임.
+   ========================================================================== */
+:root {
+  --el-color-primary: var(--c-brand);
+  --el-color-primary-light-3: #6ba5f9;
+  --el-color-primary-light-5: #98c1fb;
+  --el-color-primary-light-7: var(--c-brand-line);
+  --el-color-primary-light-8: #d8e7fe;
+  --el-color-primary-light-9: var(--c-brand-soft);
+  --el-color-primary-dark-2: var(--c-brand-dark);
+
+  --el-color-danger: var(--c-hot);
+  --el-color-warning: var(--c-normal);
+  --el-color-success: var(--c-good);
+  --el-color-info: var(--c-text-muted);
+
+  --el-text-color-primary: var(--c-text);
+  --el-text-color-regular: var(--c-text-sub);
+  --el-text-color-secondary: var(--c-text-muted);
+  --el-text-color-placeholder: var(--c-text-faint);
+
+  --el-border-color: var(--c-line);
+  --el-border-color-light: var(--c-line);
+  --el-border-color-lighter: var(--c-line);
+  --el-border-color-extra-light: var(--c-surface-mute);
+
+  --el-fill-color-blank: var(--c-surface);
+  --el-fill-color-light: var(--c-surface-soft);
+  --el-fill-color-lighter: var(--c-surface-mute);
+  --el-bg-color: var(--c-surface);
+  --el-bg-color-page: var(--c-page);
+
+  --el-border-radius-base: var(--radius-s);
+  --el-border-radius-small: var(--radius-s);
+  --el-font-size-base: var(--fs-body);
+  --el-font-family: var(--font-sans);
+
+  /* Vercel 톤에서 카드는 떠 있지 않음. el-card 기본 그림자를 보더로 대체함. */
+  --el-box-shadow-light: none;
+}
+
+/* ==========================================================================
+   11. 기본 요소
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  /* 카드가 흰색이라 배경까지 흰색이면 경계가 안 보임. 옅은 회색을 깔아 카드가 뜨게 함. */
+  background-color: var(--c-page);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-base);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 제목은 본문보다 촘촘하게. 카드 안에서 제목이 두 줄로 넘어갈 때 덜 벌어짐. */
+h1,
+h2,
+h3,
+h4 {
+  color: var(--c-text);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+}
+
+/* 기온·습도처럼 자동 갱신되는 숫자에 붙이는 유틸. 폭이 고정돼 레이아웃이 안 흔들림. */
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* 키보드 포커스 링을 브랜드색 한 종류로 통일함. 카드 전체가 클릭 대상이라
+   마우스 클릭에도 링이 남으면 지저분해서 :focus-visible 만 씀. */
+:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}

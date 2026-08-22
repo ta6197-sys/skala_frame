@@ -1,0 +1,17 @@
+@import './base.css';
+
+/* 과제 7. create-vue 스캐폴드가 준 기본 CSS 를 걷어냈다.
+   - 원래 여기에는 1024px 이상에서 body 를 flex, #app 을 2열 그리드로 만드는 규칙이 있었다.
+   - #app 의 자식은 .practice-container 하나뿐이라, 2열 그리드에서 왼쪽 칸만 채우고
+     오른쪽 절반이 영구 공백이 됐다. 넓은 모니터에서 화면이 왼쪽으로 쏠려 보이던 원인.
+   - 화면이 1개일 때는 안 보이던 문제가 view 9개가 되면서 드러났다. */
+#app {
+  width: 100%;
+  padding: 24px 0 48px 0;
+}
+
+/* 링크 기본색만 브랜드 톤으로 맞춘다. 배경 하이라이트는 네비게이션과 겹쳐서 뺐다. */
+a {
+  color: var(--c-brand);
+  text-decoration: none;
+}
