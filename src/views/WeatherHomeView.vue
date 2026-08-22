@@ -411,6 +411,16 @@ watch(
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
+/* 과제 8. 폰에서 요약 타일이 세로로 4개 쌓여 380px 를 쓰고 있었다 (실측 375px 기준).
+   minmax 하한이 160px 라 컨테이너 317px 에서 2열(160*2+12=332)이 안 들어가 1열로 떨어진다.
+   타일 안에 든 것은 제목 한 줄 + 숫자 한 줄뿐이라 152px 폭이면 충분하다.
+   보조 카드에 쓴 것과 같은 방법 - 칸 수를 내가 정해야 하는 자리에선 고정 열 수를 쓴다.
+   380px -> 184px. 이 화면에서 도시 카드 다음으로 큰 블록이었다. */
+@media (max-width: 720px) {
+  .summary-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 .summary-tile {
   border-radius: var(--radius-m);
   border-color: var(--c-line);
@@ -470,16 +480,20 @@ watch(
   }
 }
 
+/* .myplace-row 와 같은 이유로 wrap 을 쓰지 않는다 (위 주석 참고). */
 .favorite-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 .favorite-list {
+  min-width: 0;
   font-size: var(--fs-sm);
   color: var(--c-text-sub);
+}
+.favorite-row .el-button {
+  flex-shrink: 0;
 }
 .recent-row {
   display: flex;
@@ -520,14 +534,23 @@ watch(
 .alert-gap {
   margin-bottom: 10px;
 }
-/* 과제 8. 카드 폭이 1106 -> 545px 로 절반이 되면서 한 줄에 안 들어가는 경우가 생긴다.
-   flex-wrap 이 없으면 안쪽 요소가 서로를 눌러 버튼 글자가 세로로 쪼개진다. */
+/* 과제 8. 카드 폭이 1106 -> 545px(데스크톱 2열) / 317px(폰) 로 좁아진다.
+   여기에 flex-wrap: wrap 을 주면 안 된다. 실측으로 확인한 내용:
+   wrap 이 켜지면 flex 아이템이 기본 크기(<p> 의 max-content) 아래로 줄어들기 전에 먼저 줄바꿈해서,
+   버튼이 통째로 다음 줄로 내려간다. 375px 에서 카드가 98px -> 153px 로 커졌다.
+   wrap 없이 두면 <p> 가 눌리면서 글자만 안에서 접히고 버튼은 옆에 남는다. 이쪽이 훨씬 낮다.
+   대신 버튼이 눌려 글자가 쪼개지지 않도록 flex-shrink 를 잠그고, <p> 만 줄어들게 한다. */
 .myplace-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+.myplace-row > div {
+  min-width: 0;
+}
+.myplace-row .el-button {
+  flex-shrink: 0;
 }
 .myplace-name {
   margin: 0;
