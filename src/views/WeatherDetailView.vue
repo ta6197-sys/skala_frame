@@ -13,6 +13,8 @@ import { getUvIndex } from '@/api/weather'
 import { formatHourLabel } from '@/utils/dayjs'
 import { getWeatherKind } from '@/data/weatherKind'
 import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
+import BaseChart from '@/components/common/BaseChart.vue'
+import { chartBase, cssVar } from '@/utils/chartTheme'
 import WeatherBackdrop from '@/components/weather/WeatherBackdrop.vue'
 
 // 개발용 배경 미리보기 도구.
@@ -48,7 +50,10 @@ const detailError = ref('')
 // 이 화면에 있던 예보 계산(오늘 구간 자르기 · 최적 시간대 · 막대 높이 · 시각 라벨)은 마크업을 하나도 모르는
 // 순수 계산이었다. 도시 코드 하나만 주면 나머지는 거기서 끝난다.
 // ref 에 복사하지 않고 computed 로 읽는 이유는 그대로다 - 복사해두면 스토어가 갱신돼도 이 화면만 옛날 값을 붙든다.
-const { cityData, targetSlots, isTodayRange, bestTimeList, slotBarHeight, slotHourLabel } =
+// timezone 은 아래 '가장 좋은 시간' 의 formatHourLabel(best.time, timezone) 이 쓰는데 여기서 빠져 있었다.
+// 템플릿에서 없는 변수를 참조하면 undefined 가 넘어가고, formatHourLabel 의 기본값(Asia/Seoul)이 대신 먹어서
+// 한국 도시만 있는 지금은 결과가 맞아 보였다. 도시를 해외로 늘리는 순간 조용히 틀린 시각을 그린다.
+const { cityData, targetSlots, isTodayRange, bestTimeList, slotHourLabel, timezone } =
   useCityForecast(() => route.params.cityId)
 
 // 주소창의 도시 코드가 바뀔 때마다 해야 할 일 : 방문 기록 + 없는 데이터 채우기 + 자외선 재요청
@@ -99,6 +104,97 @@ const slotEmoji = (status) => {
   if (status.includes('맑')) return '☀️'
   return '🌤️'
 }
+
+// ===== 과제 9. 시간별 예보 콤보 차트 =====
+// 과제 7 에서 이 자리는 CSS 로 만든 세로 막대였다. 기온 하나만 길이로 바꾸는 일이라 그걸로 충분했고,
+// "막대 높이는 원본 섭씨 기준" 이라는 주석까지 달아 화씨에서 비율이 압축되는 문제를 설명해 두었다.
+// 바꾼 이유는 축이 하나 더 필요해졌기 때문이다.
+//   - 기온(℃/℉)과 강수확률(%)은 단위가 다르고 범위도 다르다(24~28 vs 0~100).
+//     같은 막대 트랙에 얹을 수가 없어서 강수확률은 막대 아래 '💧40%' 라는 글자로만 남아 있었다.
+//   - 글자로 흩어져 있으면 "기온이 꺾이는 시각에 비 확률이 오르는가" 를 눈으로 잇지 못한다. 그게 이 표의 핵심인데.
+// 축 두 개(왼쪽 기온 / 오른쪽 강수확률)를 겹치는 순간부터는 손으로 만들 일이 아니다.
+//
+// 화씨 문제도 여기서 사라진다. ECharts 의 y축은 scale: true 로 데이터 범위에 맞춰 눈금을 잡으므로
+// 0 을 기준점으로 삼지 않는다. 단위를 바꿔도 선의 모양이 그대로다.
+const forecastChart = computed(() => {
+  const slots = targetSlots.value
+  if (!slots.length) return null
+
+  const base = chartBase()
+  const tempColor = cssVar('--c-hot', '#f04452')
+  const rainColor = cssVar('--c-cool', '#0ea5e9')
+  const axisLabel = base.yAxis.axisLabel
+
+  return {
+    ...base,
+    // 오른쪽 축 라벨(%)이 잘리지 않도록 기본 여백에서 오른쪽만 넓힌다.
+    grid: { ...base.grid, right: 20, top: 34 },
+    legend: {
+      top: 0,
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 14,
+      textStyle: { color: axisLabel.color, fontSize: 12 },
+    },
+    tooltip: {
+      ...base.tooltip,
+      // 두 계열의 단위가 다르므로 valueFormatter 하나로는 안 된다. 행을 직접 만든다.
+      // 날씨 상태(맑음/비)는 계열이 아니라 그 시각의 성질이라, 계열 목록 위에 한 줄로 붙인다.
+      formatter: (params) => {
+        const slot = slots[params[0].dataIndex]
+        const head = `${params[0].axisValue} · ${slotEmoji(slot.status)} ${slot.status}`
+        const rows = params
+          .map((item) => {
+            const unit = item.seriesName === '강수확률' ? '%' : configStore.unitSymbol
+            return `${item.marker}${item.seriesName} <b>${item.value}${unit}</b>`
+          })
+          .join('<br/>')
+        return `${head}<br/>${rows}`
+      },
+    },
+    xAxis: { ...base.xAxis, boundaryGap: true, data: slots.map((slot) => slotHourLabel(slot.time)) },
+    yAxis: [
+      {
+        ...base.yAxis,
+        axisLabel: { ...axisLabel, formatter: `{value}${configStore.unitSymbol}` },
+      },
+      {
+        ...base.yAxis,
+        // 강수확률은 0~100 이 정해진 범위다. scale 로 늘렸다 줄였다 하면 "40%" 막대가 시각마다 다른 높이로 보인다.
+        scale: false,
+        min: 0,
+        max: 100,
+        // 오른쪽 축까지 가로선을 그리면 왼쪽 축의 눈금선과 어긋나 격자가 두 겹으로 보인다.
+        splitLine: { show: false },
+        axisLabel: { ...axisLabel, formatter: '{value}%' },
+      },
+    ],
+    series: [
+      {
+        name: '강수확률',
+        type: 'bar',
+        yAxisIndex: 1,
+        barWidth: '38%',
+        itemStyle: { color: rainColor, opacity: 0.35, borderRadius: [4, 4, 0, 0] },
+        data: slots.map((slot) => slot.rainProb),
+      },
+      {
+        name: '기온',
+        type: 'line',
+        yAxisIndex: 0,
+        smooth: true,
+        symbolSize: 7,
+        lineStyle: { width: 2.5, color: tempColor },
+        itemStyle: { color: tempColor },
+        areaStyle: { color: tempColor, opacity: 0.06 },
+        // 막대 뒤로 숨지 않게 선을 위에 올린다.
+        z: 3,
+        // 변환은 그릴 때 한 번만. 통계 화면의 추이 차트와 같은 원칙이다.
+        data: slots.map((slot) => configStore.convertTemp(slot.temp)),
+      },
+    ],
+  }
+})
 
 // 이전/다음 도시 이동용 인덱스 계산. 목록의 출처만 cities.js 로 바뀌었다.
 const currentIndex = computed(() => cities.findIndex((city) => city.id === route.params.cityId))
@@ -332,30 +428,17 @@ const goHome = () => {
           </p>
         </BaseDashboardCard>
 
-        <!-- 과제 7 : 세로 리스트 → 가로 스크롤. 시간 흐름은 가로로 읽는 게 자연스럽다 -->
-        <BaseDashboardCard v-if="targetSlots.length">
+        <!-- 과제 7 : 세로 리스트 → 가로 스크롤 CSS 막대.
+             과제 9 : 기온(선) + 강수확률(막대) 콤보 차트. 축이 둘로 늘면서 손으로 그릴 범위를 넘었다. -->
+        <BaseDashboardCard v-if="forecastChart">
           <template v-slot:title
             >시간별 예보 ({{ isTodayRange ? '오늘' : '앞으로 24시간' }})</template
           >
-          <div class="slot-scroller">
-            <div v-for="slot in targetSlots" :key="slot.time" class="slot-col">
-              <span class="slot-hour">{{ slotHourLabel(slot.time) }}</span>
-              <span class="slot-emoji">{{ slotEmoji(slot.status) }}</span>
-              <div class="slot-track">
-                <div
-                  class="slot-fill"
-                  :class="configStore.isHot(slot.temp) ? 'slot-fill-hot' : 'slot-fill-cool'"
-                  :style="{ height: slotBarHeight(slot.temp) }"
-                ></div>
-              </div>
-              <span class="slot-temp num">
-                {{ configStore.convertTemp(slot.temp) }}{{ configStore.unitSymbol }}
-              </span>
-              <span class="slot-rain">💧{{ slot.rainProb }}%</span>
-            </div>
-          </div>
+          <BaseChart :option="forecastChart" height="260px" />
           <p class="best-note">
-            막대 높이는 원본 섭씨 기준입니다. 화씨는 0 이 기준점이 아니라 비율이 압축됩니다.
+            왼쪽 축은 기온({{ configStore.unitSymbol }}), 오른쪽 축은 강수확률(%)입니다. 3시간 간격
+            예보 {{ targetSlots.length }}개 시점을 그립니다. 그래프의 한 지점에 마우스를 올리면 그
+            시각의 날씨 상태까지 같이 보여줍니다.
           </p>
         </BaseDashboardCard>
 
@@ -483,61 +566,6 @@ const goHome = () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-/* ===== 시간별 예보 (가로 스크롤) ===== */
-.slot-scroller {
-  display: flex;
-  gap: var(--space-2);
-  padding-bottom: var(--space-2);
-  overflow-x: auto;
-}
-.slot-col {
-  display: flex;
-  flex: 0 0 68px;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 10px 6px;
-  background-color: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-radius: var(--radius-s);
-}
-.slot-hour {
-  font-size: var(--fs-xs);
-  color: var(--c-text-muted);
-}
-.slot-emoji {
-  font-size: 18px;
-}
-.slot-track {
-  display: flex;
-  align-items: flex-end;
-  width: 12px;
-  height: 64px;
-  background-color: var(--c-track);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-.slot-fill {
-  width: 100%;
-  border-radius: var(--radius-pill);
-  transition: height 0.3s ease;
-}
-.slot-fill-hot {
-  background-color: var(--c-hot);
-}
-.slot-fill-cool {
-  background-color: var(--c-cool);
-}
-.slot-temp {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  color: var(--c-text-sub);
-}
-.slot-rain {
-  font-size: var(--fs-xs);
-  color: var(--c-cool);
 }
 
 /* ===== 나머지 ===== */

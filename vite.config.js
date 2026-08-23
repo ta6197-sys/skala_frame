@@ -76,6 +76,10 @@ export default defineConfig(({ mode }) => {
               return 'vendor-vue'
             }
             if (/\/node_modules\/(axios|dayjs|@vueuse)\//.test(path)) return 'vendor-utils'
+            // 과제 9. echarts 는 따로 뺀다. 통계 화면에서만 쓰는데, vendor-utils 에 섞이면
+            // 첫 화면(대시보드)이 차트 코드까지 같이 내려받게 된다.
+            // 라우트가 이미 지연 로딩이라(router/index.js), 이 청크는 /weather/stats 에 들어갈 때 처음 받는다.
+            if (/\/node_modules\/(echarts|zrender|vue-echarts)\//.test(path)) return 'vendor-chart'
           },
         },
       },

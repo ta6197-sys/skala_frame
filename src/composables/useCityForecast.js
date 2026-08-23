@@ -41,11 +41,10 @@ export function useCityForecast(cityId) {
     getBestTimeList(targetSlots.value, { dust: cityData.value?.dust ?? 0 }),
   )
 
-  // 시간별 막대 : 통계 화면의 랭킹 막대와 같은 방식(순수 CSS)으로 그린다. 차트 라이브러리를 새로 들이지 않는다.
-  const maxSlotTemp = computed(() =>
-    targetSlots.value.length ? Math.max(...targetSlots.value.map((slot) => slot.temp), 1) : 1,
-  )
-  const slotBarHeight = (temp) => Math.max(Math.round((temp / maxSlotTemp.value) * 100), 8) + '%'
+  // 과제 9. maxSlotTemp / slotBarHeight 를 들어냈다.
+  // 둘은 기온을 CSS 막대 높이(%)로 바꾸는 계산이었는데, 상세 화면의 시간별 예보가 ECharts 콤보 차트로
+  // 바뀌면서 쓰는 곳이 없어졌다. 축 눈금은 이제 차트가 데이터 범위를 보고 스스로 잡는다.
+  // 화씨에서 비율이 압축되던 문제(0 이 기준점이 아니라서)도 그 계산과 함께 사라졌다.
   const slotHourLabel = (time) => fromUnix(time, timezone.value).format('H시')
 
   return {
@@ -57,8 +56,6 @@ export function useCityForecast(cityId) {
     targetSlots,
     isTodayRange,
     bestTimeList,
-    maxSlotTemp,
-    slotBarHeight,
     slotHourLabel,
   }
 }
