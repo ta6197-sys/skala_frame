@@ -28,7 +28,7 @@ describe('weatherStore.summary', () => {
     const store = useWeatherStore()
     // cityList 는 화면이 NaN 을 그리지 않도록 EMPTY_WEATHER 로 cities.length 칸을 만든다.
     expect(store.cityList).toHaveLength(cities.length)
-    // 집계는 그 6칸을 믿으면 안 된다. 안 온 도시의 0℃ 가 평균에 섞인다.
+    // 집계는 그 빈 칸들을 믿으면 안 된다. 안 온 도시의 0℃ 가 평균에 섞인다.
     expect(store.loadedCityList).toHaveLength(0)
   })
 
@@ -45,7 +45,7 @@ describe('weatherStore.summary', () => {
       city_02: observation({ temp: 20.2 }),
     }
     // 도착한 두 곳만 본다. (20.1 + 20.2) / 2 = 20.15 → 20.2
-    // 6칸으로 나눴다면 6.7 이 나왔을 자리다.
+    // 빈 칸까지 세어 도시 수 전체로 나눴다면 한참 낮은 값이 나왔을 자리다.
     expect(store.summary.count).toBe(2)
     expect(store.summary.avgTemp).toBe(20.2)
   })

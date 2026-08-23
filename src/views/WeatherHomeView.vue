@@ -180,7 +180,7 @@ watch(
       <!-- 과제 7 : 스켈레톤도 카드 그리드와 같은 격자에 깐다.
            과제 6 의 el-skeleton :rows="4" 는 실제 카드 모양과 안 닮아서 로딩→완료 때 화면이 튀었다. -->
       <div v-if="isFirstLoading" class="city-grid">
-        <el-skeleton v-for="n in 6" :key="n" animated>
+        <el-skeleton v-for="n in weatherStore.cityList.length" :key="n" animated>
           <template #template>
             <div class="skeleton-card">
               <el-skeleton-item variant="text" style="width: 40%" />
@@ -218,10 +218,10 @@ watch(
     <!-- 여기서부터는 곁들이는 정보. 위의 본체와 눈으로 끊어준다. -->
     <div class="section-divider" role="presentation"></div>
 
-    <!-- 과제 7 추가 : 도시 6곳을 한 줄로 요약. 계산은 weatherStore.summary 가 하고 통계 화면과 공유한다.
+    <!-- 과제 7 추가 : 도시 전체를 한 줄로 요약. 계산은 weatherStore.summary 가 하고 통계 화면과 공유한다.
          과제 8 이전에는 이 줄이 v-if="summary" 뿐이었고, 첫 진입 1~2초 동안
          "평균 기온 0.0℃ · 가장 더운 곳 서울 0.0℃" 가 그대로 노출됐다.
-         cityList 가 EMPTY_WEATHER 로 6칸을 항상 채우기 때문에 통신 전에도 summary 가 null 이 아니었던 것이다.
+         cityList 가 EMPTY_WEATHER 로 도시 수만큼 칸을 항상 채우기 때문에 통신 전에도 summary 가 null 이 아니었던 것이다.
          (바로 위 카드 그리드는 isFirstLoading 으로 스켈레톤을 깔고 있는데 이 줄만 빠져 있었다.)
          이제 summary 는 "도착한 도시" 만 집계하고 한 곳도 없으면 null 이라, v-if 하나로 갈린다. -->
     <div v-if="summary" class="summary-row">

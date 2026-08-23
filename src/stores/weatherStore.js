@@ -76,7 +76,7 @@ export const useWeatherStore = defineStore('weather', () => {
   const hasData = computed(() => Object.keys(weatherMap.value).length > 0)
 
   // 관측값이 실제로 도착한 도시만 남긴 목록.
-  // cityList 는 EMPTY_WEATHER 로 6칸을 항상 채운다 - 화면이 NaN 을 그리지 않게 하려는 장치인데,
+  // cityList 는 EMPTY_WEATHER 로 도시 수만큼 칸을 항상 채운다 - 화면이 NaN 을 그리지 않게 하려는 장치인데,
   // 집계에 그대로 넣으면 아직 안 온 도시의 0℃ 가 평균에 섞인다.
   // 도시들이 다 도착하기 전(1~2초)에는 "평균 11.2℃" 같은 값이 잠깐 화면에 뜬다. 실제로 그랬다.
   // 그릴 때 쓰는 목록과 집계할 때 쓰는 목록을 갈라서, 집계는 도착한 것만 본다.

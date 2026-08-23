@@ -8,7 +8,7 @@ import BaseChart from '@/components/common/BaseChart.vue'
 import { chartBase, cssVar } from '@/utils/chartTheme'
 import { fromUnix } from '@/utils/dayjs'
 
-// 요구사항 6. 본인이 추가한 view - 도시 6개를 집계해서 보여주는 통계 페이지.
+// 요구사항 6. 본인이 추가한 view - 도시 전체를 집계해서 보여주는 통계 페이지.
 // 과제 6. 집계 대상이 목업 배열에서 weatherStore 의 실시간 목록으로 바뀌었다. 계산식은 그대로다.
 // 과제 7. 두 가지가 바뀌었다.
 //   1) 평균·랭킹·최고/최저 계산을 weatherStore.summary getter 로 올렸다.
