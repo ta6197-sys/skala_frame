@@ -13,7 +13,6 @@ import UnitToggler from '@/components/common/UnitToggler.vue'
 // 과제 7. 세 가지가 바뀌었다.
 // 1) 과제 제목 + 링크 9개 나열이던 상단을 서비스 헤더로 바꿨다.
 //    주 메뉴 5개와 보조 2개를 시각적으로 갈랐고, 즐겨찾기 개수 배지는 손으로 만든 span 대신 el-badge 를 쓴다.
-//    과제 번호는 지우지 않고 el-tag 로 헤더 우측에 남겼다 (제출물이라 어느 과제인지 화면에 보여야 한다).
 // 2) fetchAll() 진입점을 여기 한 곳으로 모았다.
 //    과제 6 까지는 WeatherHomeView / FavoritesView / WeatherStatsView 세 화면이 각자 onMounted 에서 불렀다.
 //    캐시 덕에 중복 호출은 안 났지만 "언제 받아오는가" 를 아는 곳이 3곳이었다.
@@ -65,9 +64,6 @@ const subMenu = [{ to: '/troubleshooting', label: '트러블슈팅' }]
         <el-tag :type="statusTag.type" size="small" effect="light" round>
           {{ statusTag.text }}
         </el-tag>
-        <!-- 과제 번호 태그. 한 단원을 끝낼 때마다 여기와 index.html 의 <title> 이 같이 낡는다.
-             단원 하나를 가리키는 대신 지금까지 쌓인 범위를 적어서, 다음 과제에서 숫자만 늘리면 되게 둔다. -->
-        <el-tag type="info" size="small" effect="plain">과제 1~8 통합</el-tag>
         <UnitToggler />
       </div>
     </header>
