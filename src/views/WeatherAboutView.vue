@@ -73,7 +73,16 @@ const timeline = [
     items: [
       'Element Plus 온디맨드 전환 (첫 화면 1,462KB → 399KB)',
       'composable 3종 추출 · 컴포넌트 폴더 재분류',
-      'vitest 도입 (3 files / 24 tests) · 서버리스 엣지 캐시',
+      'vitest 도입 (3 files / 29 tests) · 서버리스 엣지 캐시',
+    ],
+  },
+  {
+    task: '과제 9 · 차트',
+    color: 'var(--c-brand)',
+    items: [
+      'ECharts 도입 (통계 기온 추이 · 상세 예보 콤보 차트)',
+      '차트 색을 base.css 토큰에서 읽어 화면 톤과 묶음',
+      '차트 청크를 지연 로딩으로 분리 (첫 화면 -190KB)',
     ],
   },
 ]

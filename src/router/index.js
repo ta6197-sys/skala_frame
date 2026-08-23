@@ -46,12 +46,6 @@ const routes = [
     component: () => import('@/views/TroubleshootingView.vue'),
   },
   {
-    // Element Plus Carousel 컴포넌트 예제 확인용
-    path: '/carousel',
-    name: 'CarouselDemo',
-    component: () => import('@/views/CarouselDemoView.vue'),
-  },
-  {
     // Catch-all Route : 위에서 하나도 매칭되지 않은 주소를 전부 흡수한다.
     // 반드시 배열의 "마지막" 에 있어야 한다. 위로 올리면 모든 주소를 이 규칙이 먼저 먹어버린다.
     path: '/:pathMatch(.*)*',

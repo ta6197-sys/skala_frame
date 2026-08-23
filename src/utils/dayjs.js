@@ -17,6 +17,18 @@ dayjs.locale('ko')
 export const fromUnix = (seconds, tz = 'Asia/Seoul') => dayjs.unix(seconds).tz(tz)
 
 // UNIX 초 → "오늘 오후 3시" / "내일 오전 9시"
+//
+// 시각은 'A h시'(오전/오후 + 12시간제)로 쓰지 않는다. 자정이 "오전 12시" 로 나오는데,
+// 한국어에서 이 표기는 정오로 읽히기 쉬워서 예보 시각으로는 오해를 부른다.
+// (실제로 상세 화면의 "가장 좋은 시간" 에 "내일 오전 12시" 가 떠 있었고, 그건 자정이었다.)
+// 자정·정오만 우리말 표현으로 갈라주고 나머지는 그대로 둔다.
+const hourLabel = (target) => {
+  const hour = target.hour()
+  if (hour === 0) return '자정'
+  if (hour === 12) return '정오'
+  return target.format('A h시')
+}
+
 export const formatHourLabel = (seconds, tz = 'Asia/Seoul') => {
   const target = fromUnix(seconds, tz)
   const today = dayjs().tz(tz)
@@ -27,7 +39,7 @@ export const formatHourLabel = (seconds, tz = 'Asia/Seoul') => {
       ? '내일'
       : target.format('M월 D일')
 
-  return `${dayLabel} ${target.format('A h시')}`
+  return `${dayLabel} ${hourLabel(target)}`
 }
 
 // 밀리초 타임스탬프 → "3분 전"

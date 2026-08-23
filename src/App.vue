@@ -108,10 +108,12 @@ const subMenu = [{ to: '/troubleshooting', label: '트러블슈팅' }]
   </div>
 </template>
 
-<!-- 전역 스타일: 과제 1~3 에서 쓰던 공용 CSS 를 여기서 한 번만 불러온다 -->
+<!-- 전역 스타일: 레이아웃 컨테이너와 라우트 전환 효과가 여기 들어 있다.
+     weather.css 는 지웠다 - 카드·뱃지·게이지 규칙을 담고 있었는데 실제로 쓰던 화면(/legacy)이
+     사라진 뒤로는 살아 있는 컴포넌트가 전부 자기 scoped 스타일로 같은 것을 갖고 있었다.
+     유일하게 전역에만 있던 .status-bar 는 그 사용처인 WeatherHomeView 로 옮겼다. -->
 <style>
 @import '@/assets/practice.css';
-@import '@/assets/weather.css';
 </style>
 
 <style scoped>

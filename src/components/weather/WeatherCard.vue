@@ -142,7 +142,8 @@ const humidityColor = computed(() => {
 
 <style scoped>
 /* 과제 7. 가로형에서 세로형으로. 홈의 카드 그리드 한 칸에 들어가는 모양이다.
-   같은 이름의 클래스가 assets/weather.css 에도 있지만(과제 1~3 화면용), 이쪽은 scoped 라 서로 침범하지 않는다. */
+   과제 1~3 화면용으로 같은 이름의 전역 클래스가 assets/weather.css 에 있었으나, 그 화면이
+   사라지면서 파일째 지웠다. 이제 이 이름을 정의하는 곳은 여기 하나뿐이다. */
 .weather-card {
   display: flex;
   flex-direction: column;

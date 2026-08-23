@@ -525,6 +525,20 @@ watch(
 .favorite-row .el-button {
   flex-shrink: 0;
 }
+
+/* 원래 assets/weather.css 에 있던 규칙이다. 그 파일은 과제 1~3 화면(/legacy)을 위해
+   전역으로 깔려 있었는데, 그 화면이 사라지면서 이 한 줄만 쓰이고 있었다.
+   유일한 사용처인 여기로 옮기고 파일은 지웠다. */
+.status-bar {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  font-size: var(--fs-sm);
+  text-align: center;
+  color: var(--c-text);
+  background-color: var(--c-brand-soft);
+  border: 1px solid var(--c-brand-line);
+  border-radius: var(--radius-m);
+}
 .recent-row {
   display: flex;
   flex-wrap: wrap;

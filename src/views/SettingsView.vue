@@ -149,8 +149,7 @@ const confirmReset = () => {
       <p class="setting-desc">두 값이 서로를 넘어서지 않도록 액션 안에서 막아둡니다.</p>
       <p class="setting-desc setting-source">
         기본값 30 / 80 은 한국 환경부의 PM10 등급 기준과 같습니다(30 이하 좋음, 80 이하 보통, 초과
-        나쁨). 과제 5 까지는 근거 없이 정한 숫자였는데, 과제 6 에서 대기오염 API 의 실제 PM10
-        관측값을 받게 되면서 같은 척도를 쓰는 숫자가 됐습니다.
+        나쁨). 대기오염 API 가 주는 값이 실제 PM10 관측값이라, 같은 척도를 그대로 씁니다.
       </p>
     </BaseDashboardCard>
 
