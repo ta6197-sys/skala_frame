@@ -18,7 +18,6 @@ const routeList = [
   { path: '/settings', desc: '더움 기준 온도 · 미세먼지 경계 · 체질을 직접 정하는 화면' },
   { path: '/stats', desc: '도시 6곳을 집계한 통계 페이지' },
   { path: '/troubleshooting', desc: '과제를 진행하며 막혔던 지점 기록' },
-  { path: '/legacy', desc: '과제 1~3 화면 보존 (각 단원 요구사항별 원본 컴포넌트)' },
   { path: '/:pathMatch(.*)*', desc: '없는 주소를 모두 흡수하는 404 페이지' },
 ]
 

@@ -46,12 +46,6 @@ const routes = [
     component: () => import('@/views/TroubleshootingView.vue'),
   },
   {
-    // 과제 1~3 화면 보존용. App.vue 가 라우터 껍데기로 바뀌었으므로 이 경로에서 계속 확인할 수 있다.
-    path: '/legacy',
-    name: 'LegacyTask',
-    component: () => import('@/views/LegacyTaskView.vue'),
-  },
-  {
     // Element Plus Carousel 컴포넌트 예제 확인용
     path: '/carousel',
     name: 'CarouselDemo',

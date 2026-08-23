@@ -4,23 +4,15 @@ import { troubleshootingList } from '@/data/troubleshooting'
 import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
 
 // 과제 진행 중 막혔던 지점을 모아 보는 페이지
-// 항목 데이터는 data/troubleshooting.js 에 있고, 이 화면은 필터링해서 그리기만 한다.
+// 항목 데이터는 data/troubleshooting.js 에 있고, 이 화면은 그리기만 한다.
 //
 // 과제 7. 필터 버튼 → el-radio-group(button 형), 항목 카드 → el-collapse 로 바꿨다.
 // - 항목이 늘면서 세로로 계속 길어지던 화면이 제목만 보이는 목록으로 접혔다.
 //   기록을 찾을 때는 제목만 훑다가 필요한 것만 펼치는 게 맞는 순서다.
-// - 필터를 라디오 그룹으로 바꾸면 "여러 개 중 하나" 라는 의미가 마크업에도 드러나고,
-//   좌우 화살표 키로 넘길 수 있게 된다.
-const selectedTask = ref('전체')
-
-// 데이터에 들어있는 과제 이름만 뽑아 필터 버튼을 만든다. 항목이 늘어도 버튼은 자동으로 따라온다.
-const taskList = computed(() => ['전체', ...new Set(troubleshootingList.map((item) => item.task))])
-
-const filteredList = computed(() => {
-  if (selectedTask.value === '전체') return troubleshootingList
-  return troubleshootingList.filter((item) => item.task === selectedTask.value)
-})
-
+//
+// 과제 8 이후. 제출물이 "과제 1~8 통합" 한 벌로 배포되면서, 항목을 과제 번호별로
+// 나눠보는 화면(필터 버튼 + 항목마다 붙던 "과제 N" 배지)의 쓸모가 없어졌다.
+// 걸렸던 지점을 훑는 목록으로 단순화했다.
 const solvedCount = computed(
   () => troubleshootingList.filter((item) => item.status === 'solved').length,
 )
@@ -45,25 +37,12 @@ const openPanels = ref([])
         <el-tag type="success" effect="light" round>해결 {{ solvedCount }}건</el-tag>
         <el-tag type="warning" effect="light" round>원인만 파악 {{ knownCount }}건</el-tag>
       </div>
-
-      <el-radio-group v-model="selectedTask" size="small" class="filter-row">
-        <el-radio-button v-for="task in taskList" :key="task" :value="task">
-          {{ task }}
-        </el-radio-button>
-      </el-radio-group>
     </BaseDashboardCard>
 
-    <el-empty
-      v-if="filteredList.length === 0"
-      description="해당 과제의 기록이 아직 없습니다."
-      :image-size="80"
-    />
-
-    <el-collapse v-else v-model="openPanels" class="ts-collapse">
-      <el-collapse-item v-for="item in filteredList" :key="item.id" :name="item.id">
+    <el-collapse v-model="openPanels" class="ts-collapse">
+      <el-collapse-item v-for="item in troubleshootingList" :key="item.id" :name="item.id">
         <template #title>
           <div class="ts-head">
-            <el-tag size="small" effect="plain" round>{{ item.task }}</el-tag>
             <span class="ts-title">{{ item.title }}</span>
             <el-tag
               :type="item.status === 'solved' ? 'success' : 'warning'"
@@ -101,10 +80,6 @@ const openPanels = ref([])
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
-}
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
 }
 .ts-collapse {
   border-top: none;

@@ -169,13 +169,7 @@ watch(
          그대로 살아 있고 아래 세 카드가 계속 같은 껍데기를 쓴다. SearchBar 의 props/emits 도 그대로다.
          상자를 한 겹 줄인 만큼 "검색 -> 결과" 가 한 덩어리로 읽힌다. -->
     <BaseDashboardCard class="board-card">
-      <template v-slot:title>
-        지역별 날씨 현황
-        <!-- 슬롯에 넣은 마크업은 부모(이 파일)의 scoped 스타일이 담당한다.
-             그래서 .title-note 규칙은 이 파일 <style scoped> 안에 있어야 한다.
-             다른 컴포넌트로 옮기면 에러 없이 색만 안 먹는다. -->
-        <span class="title-note">상세보기 → /weather/:cityId</span>
-      </template>
+      <template v-slot:title> 지역별 날씨 현황 </template>
 
       <!-- 검색 바. 알맹이(SearchBar)는 한 줄도 안 고쳤다.
            과제 1 요구사항 3 의 :model-value + @input 한글 처리가 그 안에 그대로 있다. -->
@@ -476,14 +470,6 @@ watch(
   margin-bottom: var(--space-6);
 }
 
-/* 카드 제목 옆에 붙는 경로 안내. 제목과 같은 크기로 두면 제목이 두 줄처럼 읽혀서
-   한 단계 작고 흐리게 낮춘다. 과제 4 의 동적 라우팅을 화면에 남겨두기 위한 표기다. */
-.title-note {
-  margin-left: var(--space-2);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-regular);
-  color: var(--c-text-faint);
-}
 
 /* 검색 바. 카드 안쪽 맨 위에서 폭을 꽉 채운다.
    el-input 은 자기 내부(.el-input__wrapper)에서 높이와 반경을 정하므로 :deep 으로 닿아야 한다.

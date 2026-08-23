@@ -45,10 +45,7 @@ const mainMenu = [
   { to: '/about', label: '서비스 소개' },
 ]
 
-const subMenu = [
-  { to: '/troubleshooting', label: '트러블슈팅' },
-  { to: '/legacy', label: '과제 1~3' },
-]
+const subMenu = [{ to: '/troubleshooting', label: '트러블슈팅' }]
 </script>
 
 <template>
