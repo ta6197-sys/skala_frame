@@ -4,5 +4,5 @@
 //
 // import.meta.env.DEV 는 Vite 가 빌드할 때 리터럴 false 로 치환하므로,
 // 배포 빌드에서는 이 모듈이 빈 함수로 굳고 호출해도 아무 일도 일어나지 않는다.
-// (상세 화면의 ?preview= 도구가 이미 쓰던 방식과 같은 장치다. 그쪽에만 적용돼 있던 것을 여기로 넓혔다.)
+// (상세 화면의 ?preview= 도구가 쓰던 방식과 같은 장치다. 그 도구는 과제 9 에서 걷어냈고 이 장치만 남았다.)
 export const logDev = import.meta.env.DEV ? (...args) => console.log(...args) : () => {}

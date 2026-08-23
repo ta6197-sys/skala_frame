@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cities, findCity } from '@/data/cities'
 import { useConfigStore } from '@/stores/configStore'
@@ -7,7 +7,6 @@ import { useWeatherStore } from '@/stores/weatherStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useRecentStore } from '@/stores/recentStore'
 import { useCityForecast } from '@/composables/useCityForecast'
-import { useQueryParam } from '@/composables/useQueryParam'
 import { getLifeIndexList } from '@/data/lifeIndex'
 import { getUvIndex } from '@/api/weather'
 import { formatHourLabel } from '@/utils/dayjs'
@@ -16,14 +15,6 @@ import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
 import BaseChart from '@/components/common/BaseChart.vue'
 import { chartBase, cssVar } from '@/utils/chartTheme'
 import WeatherBackdrop from '@/components/weather/WeatherBackdrop.vue'
-
-// 개발용 배경 미리보기 도구.
-// 정적 import 로 가져오면 배포 빌드에도 코드가 딸려 들어간다(렌더되지 않을 뿐이다).
-// 동적 import 를 삼항 안에 두면 prod 에서 import.meta.env.DEV 가 false 로 치환되면서
-// 이 import 에 닿을 길이 없어지고, 번들러가 청크째로 들어낸다.
-const WeatherPreviewSwitch = import.meta.env.DEV
-  ? defineAsyncComponent(() => import('@/components/weather/WeatherPreviewSwitch.vue'))
-  : null
 import LifeIndexBar from '@/components/weather/LifeIndexBar.vue'
 import OutfitSuggestion from '@/components/weather/OutfitSuggestion.vue'
 
@@ -218,27 +209,13 @@ const displayFeelsLike = computed(() =>
 // 색을 CSS 에 박지 않고 데이터가 클래스를 고르게 하는 방식 - Vue.pdf p.6 의 ":class 로 동적 표현" 지침.
 // 판정식은 data/weatherKind.js 한 곳에 있다. 화면 전체 배경(WeatherBackdrop)도 같은 함수를 쓰기 때문에
 // 여기에 if 문을 다시 두면 나중에 한쪽만 고쳐서 히어로와 배경이 서로 다른 날씨를 그리게 된다.
-// ===== 개발용 : 배경 연출 미리보기 =====
-// 도시 6곳이 전부 비슷한 날씨면 눈·안개·뇌우 배경을 영영 못 본다. 그래서 주소창으로 강제할 수 있게 뒀다.
-//   /weather/city_01?preview=13n  → 밤에 내리는 눈으로 그린다
+// 과제 9. 개발용 배경 미리보기(?preview=)를 걷어냈다.
+// 눈·안개·뇌우 배경 연출을 만들 때는 그 날씨가 오기를 기다릴 수 없어서 주소창으로 강제하는 도구가 필요했지만,
+// 연출이 확정된 지금은 화면에 DEV 배너 한 줄과 코드 경로가 남을 뿐이다.
+// (같은 패턴을 쓰던 대시보드의 검색어(?search=)는 제품 기능이므로 그대로 있다.)
 //
-// 검색어(WeatherHomeView)와 같은 방식이다. 주소창이 원본이고 화면은 computed 로 파생만 한다.
-// ref 를 따로 두면 값이 두 곳에 생기고 뒤로가기에서 어긋난다. (과제 7 원칙 1)
-//
-// import.meta.env.DEV 는 Vite 가 빌드할 때 false 로 치환한다.
-// 그래서 배포본에서는 이 computed 가 항상 null 이고, ?preview= 를 붙여도 아무 일도 일어나지 않는다.
-// 아무 문자열이나 받으면 unknown 으로 떨어져 배경이 사라진다. 아는 코드일 때만 통과시킨다.
-const { value: previewParam, setValue: handleUpdatePreview } = useQueryParam('preview', {
-  validate: (value) => getWeatherKind(value) !== 'unknown',
-})
-
-const previewIcon = computed(() => (import.meta.env.DEV ? previewParam.value || null : null))
-
-const isPreviewing = computed(() => previewIcon.value !== null)
-
-// 화면이 실제로 그릴 때 쓰는 아이콘. 미리보기가 켜져 있으면 그것을, 아니면 관측값을.
-// 히어로 그라디언트 · 히어로 아이콘 이미지 · 화면 배경이 전부 이 하나를 본다.
-const displayIcon = computed(() => previewIcon.value ?? cityData.value?.icon ?? null)
+// 화면이 실제로 그릴 때 쓰는 아이콘. 히어로 그라디언트 · 히어로 아이콘 이미지 · 화면 배경이 전부 이 하나를 본다.
+const displayIcon = computed(() => cityData.value?.icon ?? null)
 
 const heroTheme = computed(() => `hero-${getWeatherKind(displayIcon.value)}`)
 
@@ -302,26 +279,6 @@ const goHome = () => {
     <!-- 본문은 배경보다 위(z-index: 1)에 둔다. 안 그러면 빗줄기가 글자 위로 지나간다 -->
     <div class="detail-content">
       <h3>지역별 상세 기상관측 정보</h3>
-
-      <!-- 개발 중에만 보이는 도구. 배포 빌드에서는 WeatherPreviewSwitch 가 null 이라 렌더되지 않는다. -->
-      <component
-        :is="WeatherPreviewSwitch"
-        v-if="WeatherPreviewSwitch"
-        :current-icon="displayIcon"
-        :is-previewing="isPreviewing"
-        @update-preview="handleUpdatePreview"
-      />
-
-      <!-- 미리보기 중에는 화면의 배경/아이콘이 실제 관측값이 아니라는 걸 분명히 밝힌다.
-           안 그러면 스크린샷을 찍어두고 나중에 진짜 날씨로 착각하게 된다. -->
-      <el-alert
-        v-if="isPreviewing"
-        class="alert-gap"
-        :title="`배경 미리보기 중입니다 (${displayIcon}). 기온·습도 등 표의 숫자는 실제 관측값 그대로입니다.`"
-        type="warning"
-        show-icon
-        :closable="false"
-      />
 
       <!-- 정상적으로 도시를 찾은 경우 -->
       <template v-if="cityData">
