@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { troubleshootingList } from '@/data/troubleshooting'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
 
 // 과제 진행 중 막혔던 지점을 모아 보는 페이지
 // 항목 데이터는 data/troubleshooting.js 에 있고, 이 화면은 필터링해서 그리기만 한다.

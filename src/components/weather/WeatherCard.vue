@@ -62,7 +62,21 @@ const humidityColor = computed(() => {
 </script>
 
 <template>
-  <div class="weather-card" @click="emit('select-card', city)">
+  <!-- 접근성.
+       마우스로는 카드 아무 데나 누르면 하단 상태바가 바뀌는데, 키보드에는 그 길이 없었다.
+       role="button" + tabindex 를 카드에 거는 방법은 쓰지 않았다. 이 카드 안에는 체크박스와
+       버튼이 이미 들어 있어서, 버튼 안에 버튼이 든 구조가 되면 스크린리더가 카드를 하나의
+       누를 수 있는 것으로 읽고 안쪽 컨트롤의 설명을 통째로 삼킨다.
+       대신 focusin 을 쓴다 - 키보드로 카드 안의 체크박스나 상세보기 버튼에 도달하는 순간
+       그 카드가 선택된다. 마우스 클릭과 결과가 같고, 없는 역할을 지어내지도 않는다.
+       role="group" + aria-label 은 "여기부터 서울 카드" 라고 경계를 알려주는 용도다. -->
+  <div
+    class="weather-card"
+    role="group"
+    :aria-label="`${city.name} 날씨 카드`"
+    @click="emit('select-card', city)"
+    @focusin="emit('select-card', city)"
+  >
     <header class="card-head">
       <!-- 즐겨찾기: 이제 부모의 배열이 아니라 스토어를 직접 보고 action 으로 고친다 -->
       <el-checkbox

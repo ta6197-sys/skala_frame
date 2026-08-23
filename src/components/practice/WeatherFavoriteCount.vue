@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { logDev } from '@/utils/devLog'
 import { weatherData } from '@/data/weatherData'
 
 const weatherList = ref([...weatherData])
@@ -12,7 +13,7 @@ const favoriteCount = computed(() => favorites.value.length)
 
 // 본인만의 watcher : 즐겨찾기 개수가 바뀔 때마다 콘솔로그
 watch(favoriteCount, (newVal, oldVal) => {
-  console.log(`[watch] 즐겨찾기 개수가 ${oldVal}개 -> ${newVal}개로 변경되었습니다`)
+  logDev(`[watch] 즐겨찾기 개수가 ${oldVal}개 -> ${newVal}개로 변경되었습니다`)
 })
 </script>
 

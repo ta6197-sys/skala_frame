@@ -302,7 +302,7 @@ export const troubleshootingList = [
     status: 'solved',
   },
   {
-    id: 'ts_20',
+    id: 'ts_24',
     task: '과제 7',
     title: '배경 애니메이션이 멈춰 있는 줄 알았다 - 숨겨진 탭에서는 애니메이션이 얼어붙는다',
     symptom:
@@ -315,7 +315,7 @@ export const troubleshootingList = [
     status: 'solved',
   },
   {
-    id: 'ts_21',
+    id: 'ts_25',
     task: '과제 7',
     title: '개발용 도구를 import.meta.env.DEV 로 감쌌는데도 배포 번들에 코드가 남았다',
     symptom:
@@ -326,5 +326,109 @@ export const troubleshootingList = [
       '정적 import 를 동적 import 로 바꾸고 삼항 안에 넣었다. const X = import.meta.env.DEV ? defineAsyncComponent(() => import(...)) : null 형태다. prod 에서는 조건이 false 로 굳으면서 import() 에 닿을 길이 사라지고 번들러가 청크째로 들어낸다. 빌드 후 dist 를 문자열로 검색해서 0건인 것을 눈으로 확인했다 - "그럴 것이다" 가 아니라 실제로 세어봐야 했다. 다만 부모 화면 템플릿에 있는 알림 문구 하나는 렌더 함수에 문자열로 남는데, 이건 화면에 뜨지 않는 죽은 값이고 20바이트라 그대로 뒀다.',
     tags: ['Vite', '번들', 'tree-shaking', '환경변수', '배포'],
     status: 'solved',
+  },
+  {
+    id: 'ts_26',
+    task: '과제 8',
+    title: 'Element Plus 를 온디맨드로 바꿨더니 화면 절반이 기본 파랑으로 돌아갔다',
+    symptom:
+      '전체 등록(app.use(ElementPlus))을 걷어내고 unplugin-vue-components 로 바꾸자 번들은 줄었는데, 버튼과 태그가 브랜드 초록이 아니라 Element Plus 기본 파랑(#409EFF)으로 나왔다. 과제 7 에서 한 번 겪고 고쳐둔 증상이 그대로 재발했다.',
+    cause:
+      'Element Plus 와 base.css 가 둘 다 :root 에 변수를 정의하므로 나중에 불린 쪽이 이긴다. 과제 7 에서는 main.js 맨 위에서 element-plus/dist/index.css 를 먼저 불러 순서를 잡아뒀는데, 그 줄을 지운 것이 원인이었다. 온디맨드에서는 컴포넌트 CSS 를 각 .vue 파일이 불러오고, 그 import 는 App.vue 를 거쳐 main.css 보다 뒤에 평가된다.',
+    solution:
+      '컴포넌트별 CSS 파일(el-button.css 등)을 열어보니 :root 정의가 없고 --el-* 를 참조만 하고 있었다. 변수 정의는 theme-chalk/base.css 한 곳에만 있다. 그래서 dist/index.css(374KB, 전체) 대신 theme-chalk/base.css 만 main.js 맨 위에서 부르는 것으로 좁혔다. ES 모듈은 한 번만 평가되므로 나중에 누가 다시 import 해도 자리는 그 첫 줄로 고정된다. 빌드 후 브라우저에서 getComputedStyle 로 --el-color-primary 가 브랜드색인지 직접 확인했다.',
+    tags: ['Element Plus', 'CSS 변수', '번들', 'unplugin-vue-components'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_27',
+    task: '과제 8',
+    title: '온디맨드 전환 후 확인창만 스타일이 벗겨졌다',
+    symptom:
+      '버튼·카드·태그는 멀쩡한데 즐겨찾기 비우기와 설정 되돌리기에서 뜨는 확인창(ElMessageBox)과 알림(ElMessage)만 흰 배경에 테두리 없는 텍스트로 나왔다. 에러는 한 줄도 안 났다.',
+    cause:
+      'unplugin-vue-components 는 템플릿을 훑어서 el- 태그를 찾는 방식이다. ElMessage / ElMessageBox 는 템플릿이 아니라 script 에서 함수로 부르는 것이라 플러그인 눈에 띄지 않는다. JS 는 명시적 import 로 이미 들어와 동작하지만, CSS 를 붙여주는 주체가 없어진 것이다.',
+    solution:
+      '해당 화면에서 element-plus/theme-chalk/el-message.css, el-message-box.css, el-overlay.css 를 직접 import 했다. 명시적 import 를 지우고 자동 import 에 맡기는 방법도 있었지만, 어디서 온 함수인지 코드에 안 보이게 되므로 쓰지 않았다. 고친 뒤 프로덕션 빌드를 띄워 실제로 확인창을 열고 배경색·모서리·오버레이가 잡히는지 확인했다.',
+    tags: ['Element Plus', 'unplugin-vue-components', 'CSS', '배포 빌드'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_28',
+    task: '과제 8',
+    title: '첫 진입의 "평균 기온 0.0℃" 를 고쳤는데 절반만 고쳐졌다',
+    symptom:
+      '대시보드에 들어가면 1~2초 동안 요약 타일이 "평균 기온 0.0℃ · 가장 더운 곳 서울 0.0℃" 로 떠 있었다. 바로 위 카드 그리드는 스켈레톤을 깔고 있는데 이 줄만 빠져 있었다.',
+    cause:
+      'cityList 가 EMPTY_WEATHER 로 항상 6칸을 채우기 때문에 통신 전에도 summary 가 null 이 아니다. 이 6칸은 원래 "화면이 NaN 을 그리지 않게" 만든 장치인데, 집계가 같은 목록을 그대로 쓰고 있었다.',
+    solution:
+      'v-if 에 hasData 를 얹는 것으로 먼저 막았는데, 로딩 과정을 iframe 에 띄워 70ms 간격으로 30번 찍어보니 부족했다. hasData 는 도시 한 곳만 도착해도 참이라 "1곳 실측 + 5곳 0℃ 를 6으로 나눈 평균 11.2℃" 가 여전히 잠깐 떴다. 원인이 화면이 아니라 집계에 있었던 것이다. 그리는 목록(cityList)과 집계하는 목록(loadedCityList = 관측값이 실제로 도착한 도시만)을 갈랐다. 한 곳도 없으면 summary 가 null 이라 화면은 v-if 하나로 갈린다. 다시 찍어보니 0℃ 도 부분 평균도 나오지 않고 31.8 → 33.5 → 32.8 → 32.7 로만 움직였다. 통계 화면이 이미 갖고 있던 el-empty 빈 상태도 그제야 실제로 동작하게 됐다.',
+    tags: ['Vue', 'computed', '로딩 상태', '측정'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_29',
+    task: '과제 8',
+    title: '엣지 캐시를 걸었더니 방금 고친 "몇 분 전" 이 다시 거짓말을 하게 됐다',
+    symptom:
+      '서버리스 함수에 Cache-Control: s-maxage=600, stale-while-revalidate=1800 을 걸었다. 이 조합에서는 배포 후 화면이 "몇 초 전 기준 · 실시간 관측" 이라고 말하면서 실제로는 25분 전 데이터를 보여줄 수 있다. 로컬에서는 Vite 프록시가 캐시를 하지 않아 절대 재현되지 않는다.',
+    cause:
+      '라벨의 기준값이 lastFetched 였기 때문. 그건 "우리가 요청한 시각" 이지 "관측한 시각" 이 아니다. 엣지 캐시가 앞에 서면 둘이 갈라진다. SWR 창 안에서는 엣지가 만료된 값을 그대로 주는데, 창을 30분으로 잡아둬서 최악의 경우 40분 된 데이터가 나갈 수 있었다. s-maxage 를 프런트 캐시(10분)와 맞춰놓고도 SWR 이 그 합의를 스스로 깬 셈이다.',
+    solution:
+      'OpenWeatherMap 응답의 dt(관측 시각)를 api/weather.js 가 observedAt 으로 받아 스토어까지 올려두고 있었는데 어느 화면도 쓰지 않고 있었다. 과제 7 에서 icon 을 두고 지적한 것과 같은 상태였다. 라벨의 기준을 lastFetched 에서 observedAt 으로 바꿨다. 여섯 곳 중 가장 오래된 것을 고른다 - 한 곳이라도 오래되면 "방금" 이라고 하면 안 되기 때문이다. 목업 폴백에는 dt 가 없으므로 그때만 lastFetched 로 물러선다. 게터 이름도 lastFetchedLabel 에서 observedLabel 로 바꿨다. 가리키는 것이 달라졌으면 이름도 달라져야 한다. SWR 은 별개로 1800 에서 120 으로 줄였다. 뒤에서 도는 재검증은 1초 안에 끝나므로 2분이면 몰림을 흡수하기에 충분하고, 사용자가 40분 된 값을 볼 이유는 없다. 고치고 나서 알게 된 것 하나 - 엣지 캐시가 없는 로컬 빌드에서도 라벨이 "몇 초 전" 이 아니라 "4분 전 관측" 으로 나왔다. OpenWeatherMap 자체가 관측값을 주기적으로 갱신하므로 방금 요청해도 dt 는 몇 분 전이다. 즉 이 라벨은 배포 전에도 이미 거짓말을 하고 있었고, 엣지 캐시가 그걸 더 크게 만들었을 뿐이었다.',
+    tags: ['캐시', '배포', 'Vercel', '상대시간', 'observedAt'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_30',
+    task: '과제 8',
+    title: 'Origin 검사로 공짜 프록시를 막았다고 생각했는데 막지 못했다',
+    symptom:
+      '서버리스 함수가 경로 화이트리스트만 갖고 있어서, 허용된 4개 경로 안에서는 누구나 내 키로 무제한 호출할 수 있었다. 방어로 Origin 헤더 검사를 넣었는데, 정작 막으려던 curl 은 그대로 통과했다.',
+    cause:
+      '브라우저는 교차 출처 요청에만 Origin 을 붙인다. curl 이나 서버 스크립트는 이 헤더를 아예 보내지 않으므로 if (origin && ...) 이 단락 평가로 그냥 지나간다. Origin 검사가 막을 수 있는 것은 "다른 사이트가 자기 페이지에서 부르는 것" 뿐이고, 스크립트로 직접 때리는 쪽은 애초에 대상이 아니었다.',
+    solution:
+      '방어의 무게중심을 엣지 캐시로 옮겼다. s-maxage 는 같은 주소로 들어온 요청을 엣지에서 끊으므로, 누가 몇 번을 때리든 OpenWeatherMap 원본 호출은 10분당 18회로 묶인다. 도시 좌표가 고정이라 주소도 고정이기 때문에 성립하는 방법이다. Origin 검사는 지우지 않고 남기되 "이것으로 막히는 것과 안 막히는 것" 을 주석에 명시했다. 그리고 실패 응답(401/429)에는 no-store 를 걸었다 - 한도 초과를 10분간 캐시하면 원인을 고친 뒤에도 같은 에러가 계속 나온다.',
+    tags: ['보안', 'Vercel Functions', '캐시', 'CORS'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_31',
+    task: '과제 8',
+    title: 'prettier 를 마크다운에 돌렸더니 문서 내용이 조용히 바뀌었다',
+    symptom:
+      '정리한 문서에 prettier --write 를 돌렸다. 나중에 확인해보니 README 안의 라우터 설명에서 catch-all 경로 표기가 망가져 있었다. 별표 두 개가 밑줄로 바뀌어 정규식이 다른 문자열이 됐고, 환경변수 이름 VITE_ 에는 역슬래시 이스케이프가 붙었다. 에러도 경고도 없었다.',
+    cause:
+      'prettier 는 .md 를 마크다운으로 해석한다. 코드 백틱 밖에 있는 별표와 밑줄은 강조 문법으로 보이므로, 자기 스타일에 맞춰 표기를 바꾸거나 이스케이프를 붙인다. 문서 입장에서는 정규식과 환경변수 이름이 망가진 것이다.',
+    solution:
+      '망가진 표기를 되돌리고, 문서 안의 코드 조각은 백틱으로 감싸는 것을 규칙으로 잡았다. package.json 의 format 스크립트가 원래 src/ 만 대상으로 하고 있었는데 그게 맞는 범위였다 - 문서에 코드 포매터를 돌릴 이유가 없다. 얻은 것: 도구가 파일을 고칠 때 에러가 안 난다고 안전한 게 아니다. --write 를 돌린 뒤에는 diff 를 봐야 한다.',
+    tags: ['prettier', '문서', '도구', 'diff 확인'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_32',
+    task: '과제 8',
+    title: '재지 않은 숫자를 보고서에 적었다가 227줄 틀렸다',
+    symptom:
+      'composable 3개를 뽑고 나서 "화면 파일이 636줄에서 약 380줄로 줄었다" 고 적었다. 실제로는 607줄이었다. 227줄 차이다.',
+    cause:
+      'script 블록이 눈에 띄게 줄어든 것을 보고 파일 전체가 그만큼 줄었다고 짐작했다. 같은 보고서의 다른 숫자(번들 바이트, 테스트 개수)는 전부 실제로 재서 바이트 단위까지 맞았는데, 이것만 재지 않았다. wc -l 한 번이면 끝날 일이었다.',
+    solution:
+      '블록별로 다시 쟀다. Home 은 script 153 에서 109, template 170 에서 183, style 246 에서 246 으로 합계 636 에서 610 이다. composable 추출이 겨냥한 것은 script 였고 그건 실제로 44줄 줄었다. 파일이 600줄인 진짜 이유는 style 이었다(ts_33). 기준을 하나 세웠다 - 보고서에 숫자를 쓸 때 그 숫자를 만든 명령어를 옆에 적을 수 있는가. "약" 이 붙은 숫자는 안 잰 숫자다.',
+    tags: ['측정', '검증', 'composable'],
+    status: 'solved',
+  },
+  {
+    id: 'ts_33',
+    task: '과제 8',
+    title: '화면 파일이 600줄인 진짜 이유는 로직이 아니라 CSS 였다',
+    symptom:
+      'composable 로 로직을 뽑아냈는데도 WeatherHomeView 610줄, WeatherDetailView 605줄, WeatherBackdrop 454줄이 그대로 남았다.',
+    cause:
+      '세 파일에서 style 블록이 각각 246 / 226 / 296 줄을 차지한다. base.css 에 색·간격·타이포 토큰은 잘 잡혀 있는데 레이아웃 패턴은 공유되지 않는다. .city-grid / .summary-row / .utility-grid / .hero-* 가 전부 "카드를 격자에 깐다" 는 같은 문제를 화면마다 새 이름으로 다시 푼다.',
+    solution:
+      '이번 범위에서는 손대지 않기로 했다. 제출 직전에 CSS 를 걷어내는 작업은 회귀 위험이 크고 눈으로 확인해야 할 화면이 9개다. 다만 기록은 남긴다 - 이 항목이 열려 있는 것과 "composable 로 파일이 줄었다" 고 믿고 넘어가는 것은 다르다. 다음에 손댄다면 auto-fill 격자 유틸 클래스 하나(가변 최소폭 + 폰에서 1열)를 base.css 에 두고 세 화면이 그것을 쓰게 하는 것이 첫 단계다.',
+    tags: ['CSS', '리팩터링', '기술부채'],
+    status: 'known',
   },
 ]

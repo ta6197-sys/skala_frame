@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
 
 // 과제 4. 정적 소개 페이지. 상태가 없으므로 Lazy Loading 대상으로 두기 딱 좋다.
 // 과제 7. 라우트 표를 el-descriptions 로, 적용 기능을 단원별 el-timeline 으로 바꿨다.
@@ -18,7 +18,7 @@ const routeList = [
   { path: '/settings', desc: '더움 기준 온도 · 미세먼지 경계 · 체질을 직접 정하는 화면' },
   { path: '/stats', desc: '도시 6곳을 집계한 통계 페이지' },
   { path: '/troubleshooting', desc: '과제를 진행하며 막혔던 지점 기록' },
-  { path: '/legacy', desc: '과제 1~3 화면 보존' },
+  { path: '/legacy', desc: '과제 1~3 화면 보존 (각 단원 요구사항별 원본 컴포넌트)' },
   { path: '/:pathMatch(.*)*', desc: '없는 주소를 모두 흡수하는 404 페이지' },
 ]
 
@@ -66,6 +66,15 @@ const timeline = [
       'Element Plus 를 4종 → 15종 이상으로 확대 적용',
       '날씨 아이콘 도입 · 카드 그리드 · 상세 히어로',
       '검색어를 주소창 단방향으로 정리',
+    ],
+  },
+  {
+    task: '과제 8 · 마감',
+    color: 'var(--c-hot)',
+    items: [
+      'Element Plus 온디맨드 전환 (첫 화면 1,462KB → 399KB)',
+      'composable 3종 추출 · 컴포넌트 폴더 재분류',
+      'vitest 도입 (3 files / 24 tests) · 서버리스 엣지 캐시',
     ],
   },
 ]

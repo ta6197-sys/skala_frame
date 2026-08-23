@@ -1,9 +1,16 @@
 <script setup>
 import { computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+// 과제 8. 온디맨드 전환 후 추가한 두 줄.
+// <el-xxx> 태그는 플러그인이 템플릿에서 찾아 CSS 까지 같이 붙여주지만, ElMessage / ElMessageBox 는
+// 템플릿이 아니라 코드에서 부르는 것이라 플러그인 눈에 띄지 않는다. 스타일을 직접 챙겨야 한다.
+// (안 붙이면 에러 없이 흰 배경에 테두리 없는 알림이 뜬다 - 실제로 그렇게 한 번 나왔다)
+import 'element-plus/theme-chalk/el-message.css'
+import 'element-plus/theme-chalk/el-message-box.css'
+import 'element-plus/theme-chalk/el-overlay.css'
 import { useConfigStore } from '@/stores/configStore'
 import { useWeatherStore } from '@/stores/weatherStore'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
 
 // 과제 5(요구사항 4). "내 기준" 설정 화면
 // 과제 1에서 강사가 정해준 25도/30/80 이라는 숫자를 사용자가 직접 옮길 수 있게 만든 페이지.

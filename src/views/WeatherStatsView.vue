@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/configStore'
 import { useWeatherStore } from '@/stores/weatherStore'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
 
 // 요구사항 6. 본인이 추가한 view - 도시 6개를 집계해서 보여주는 통계 페이지.
 // 과제 6. 집계 대상이 목업 배열에서 weatherStore 의 실시간 목록으로 바뀌었다. 계산식은 그대로다.

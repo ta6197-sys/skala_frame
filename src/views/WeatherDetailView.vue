@@ -6,22 +6,24 @@ import { useConfigStore } from '@/stores/configStore'
 import { useWeatherStore } from '@/stores/weatherStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useRecentStore } from '@/stores/recentStore'
-import { getLifeIndexList, getBestTimeList } from '@/data/lifeIndex'
+import { useCityForecast } from '@/composables/useCityForecast'
+import { useQueryParam } from '@/composables/useQueryParam'
+import { getLifeIndexList } from '@/data/lifeIndex'
 import { getUvIndex } from '@/api/weather'
-import { fromUnix, formatHourLabel } from '@/utils/dayjs'
+import { formatHourLabel } from '@/utils/dayjs'
 import { getWeatherKind } from '@/data/weatherKind'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
-import WeatherBackdrop from '@/components/exercise/WeatherBackdrop.vue'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
+import WeatherBackdrop from '@/components/weather/WeatherBackdrop.vue'
 
 // 개발용 배경 미리보기 도구.
 // 정적 import 로 가져오면 배포 빌드에도 코드가 딸려 들어간다(렌더되지 않을 뿐이다).
 // 동적 import 를 삼항 안에 두면 prod 에서 import.meta.env.DEV 가 false 로 치환되면서
 // 이 import 에 닿을 길이 없어지고, 번들러가 청크째로 들어낸다.
 const WeatherPreviewSwitch = import.meta.env.DEV
-  ? defineAsyncComponent(() => import('@/components/exercise/WeatherPreviewSwitch.vue'))
+  ? defineAsyncComponent(() => import('@/components/weather/WeatherPreviewSwitch.vue'))
   : null
-import LifeIndexBar from '@/components/exercise/LifeIndexBar.vue'
-import OutfitSuggestion from '@/components/exercise/OutfitSuggestion.vue'
+import LifeIndexBar from '@/components/weather/LifeIndexBar.vue'
+import OutfitSuggestion from '@/components/weather/OutfitSuggestion.vue'
 
 // 과제 4. /weather/:cityId 동적 경로가 매칭될 때 열리는 상세 페이지.
 // 과제 6. 목업에서 도시를 찾던 자리를 weatherStore 로 바꾸고, 이 화면에서만 쓰는 예보/자외선을 여기서 직접 받는다.
@@ -42,9 +44,12 @@ const uvIndex = ref(null)
 const isDetailLoading = ref(false)
 const detailError = ref('')
 
-// 도시 정보는 스토어에서 계산해 읽는다. ref 에 복사해두면 스토어가 갱신돼도 이 화면만 옛날 값을 붙들고 있게 된다.
-const cityData = computed(() => weatherStore.getCity(route.params.cityId))
-const cityInfo = computed(() => findCity(route.params.cityId))
+// 도시 정보 + 예보 가공은 composable 이 맡는다.
+// 이 화면에 있던 예보 계산(오늘 구간 자르기 · 최적 시간대 · 막대 높이 · 시각 라벨)은 마크업을 하나도 모르는
+// 순수 계산이었다. 도시 코드 하나만 주면 나머지는 거기서 끝난다.
+// ref 에 복사하지 않고 computed 로 읽는 이유는 그대로다 - 복사해두면 스토어가 갱신돼도 이 화면만 옛날 값을 붙든다.
+const { cityData, targetSlots, isTodayRange, bestTimeList, slotBarHeight, slotHourLabel } =
+  useCityForecast(() => route.params.cityId)
 
 // 주소창의 도시 코드가 바뀔 때마다 해야 할 일 : 방문 기록 + 없는 데이터 채우기 + 자외선 재요청
 const loadCity = async (cityId) => {
@@ -86,35 +91,6 @@ watch(
   },
 )
 
-// ===== 예보 가공 =====
-const forecast = computed(() => weatherStore.getForecastOf(route.params.cityId))
-
-// 오늘 남은 구간만 잘라낸다. UNIX 초에는 시간대 정보가 없으므로 도시 타임존으로 옮겨서 날짜를 비교한다.
-// 늦은 밤이라 오늘 구간이 없으면 다음 24시간(3시간 × 8)을 대신 본다. 그때는 화면 문구도 바꾼다.
-const timezone = computed(() => cityInfo.value?.timezone ?? 'Asia/Seoul')
-
-const todaySlots = computed(() => {
-  const now = fromUnix(Math.floor(Date.now() / 1000), timezone.value)
-  return forecast.value.filter((slot) => fromUnix(slot.time, timezone.value).isSame(now, 'day'))
-})
-
-const targetSlots = computed(() =>
-  todaySlots.value.length ? todaySlots.value : forecast.value.slice(0, 8),
-)
-const isTodayRange = computed(() => todaySlots.value.length > 0)
-
-// 차별점 : 예보가 없으면 원리적으로 만들 수 없는 정보. "오늘 중 언제가 최적인가"
-const bestTimeList = computed(() =>
-  getBestTimeList(targetSlots.value, { dust: cityData.value?.dust ?? 0 }),
-)
-
-// 시간별 막대 : 통계 화면의 랭킹 막대와 같은 방식(순수 CSS)으로 그린다. 차트 라이브러리를 새로 들이지 않는다.
-const maxSlotTemp = computed(() =>
-  targetSlots.value.length ? Math.max(...targetSlots.value.map((slot) => slot.temp), 1) : 1,
-)
-const slotBarHeight = (temp) => Math.max(Math.round((temp / maxSlotTemp.value) * 100), 8) + '%'
-const slotHourLabel = (time) => fromUnix(time, timezone.value).format('H시')
-
 // 예보 시점의 아이콘은 API 가 안 주므로(우리 getForecast 가 status 만 뽑아온다) 문구로 판단해 이모지를 붙인다.
 const slotEmoji = (status) => {
   if (status.includes('비') || status.includes('소나기')) return '🌧️'
@@ -155,27 +131,18 @@ const displayFeelsLike = computed(() =>
 //
 // import.meta.env.DEV 는 Vite 가 빌드할 때 false 로 치환한다.
 // 그래서 배포본에서는 이 computed 가 항상 null 이고, ?preview= 를 붙여도 아무 일도 일어나지 않는다.
-const previewIcon = computed(() => {
-  if (!import.meta.env.DEV) return null
-  const value = route.query.preview
-  // 아무 문자열이나 받으면 unknown 으로 떨어져 배경이 사라진다. 아는 코드일 때만 통과시킨다.
-  return typeof value === 'string' && getWeatherKind(value) !== 'unknown' ? value : null
+// 아무 문자열이나 받으면 unknown 으로 떨어져 배경이 사라진다. 아는 코드일 때만 통과시킨다.
+const { value: previewParam, setValue: handleUpdatePreview } = useQueryParam('preview', {
+  validate: (value) => getWeatherKind(value) !== 'unknown',
 })
+
+const previewIcon = computed(() => (import.meta.env.DEV ? previewParam.value || null : null))
 
 const isPreviewing = computed(() => previewIcon.value !== null)
 
 // 화면이 실제로 그릴 때 쓰는 아이콘. 미리보기가 켜져 있으면 그것을, 아니면 관측값을.
 // 히어로 그라디언트 · 히어로 아이콘 이미지 · 화면 배경이 전부 이 하나를 본다.
 const displayIcon = computed(() => previewIcon.value ?? cityData.value?.icon ?? null)
-
-// 미리보기를 고르면 상태가 아니라 주소를 고친다. 그러면 위 computed 가 알아서 따라온다.
-// null 이 오면 쿼리에서 빼서 관측값으로 돌아간다.
-const handleUpdatePreview = (nextIcon) => {
-  router.replace({
-    path: route.path,
-    query: { ...route.query, preview: nextIcon ?? undefined },
-  })
-}
 
 const heroTheme = computed(() => `hero-${getWeatherKind(displayIcon.value)}`)
 

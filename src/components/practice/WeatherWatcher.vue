@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, watchEffect } from 'vue'
+import { logDev } from '@/utils/devLog'
 import { weatherData } from '@/data/weatherData'
 
 const searchQuery = ref('')
@@ -12,14 +13,12 @@ const onSearchInput = (e) => {
 
 // 요구사항 3-a) selectedCityInfo 감시 (watch) : 상태바 문구가 바뀔 때마다 콘솔로그를 남긴다.
 watch(selectedCityInfo, (newVal) => {
-  console.log(
-    `[watch 감지] 상태 바 문구가 업데이트되었습니다 -> "${newVal?.name}가 선택되었습니다"`,
-  )
+  logDev(`[watch 감지] 상태 바 문구가 업데이트되었습니다 -> "${newVal?.name}가 선택되었습니다"`)
 })
 
 // 요구사항 3-b) searchQuery 감시 (watchEffect) : 타이핑할 때마다 자동으로 추적해서 콘솔로그를 남긴다.
 watchEffect(() => {
-  console.log(
+  logDev(
     `[watchEffect 자동 호출] 현재 검색어 '${searchQuery.value}'에 매칭되는 API 데이터를 필터링합니다`,
   )
 })

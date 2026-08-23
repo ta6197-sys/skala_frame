@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { useIntervalFn } from '@vueuse/core'
 import { cities } from '@/data/cities'
 import { weatherData } from '@/data/weatherData'
 import { getCurrentWeather, getAirPollution, getForecast } from '@/api/weather'
@@ -35,10 +36,21 @@ export const useWeatherStore = defineStore('weather', () => {
   // ===== state =====
   const weatherMap = ref({}) // cityId -> 관측값 (현재날씨 + 미세먼지 + 강수확률)
   const forecastMap = ref({}) // cityId -> 3시간 간격 예보 배열
-  const isLoading = ref(false)
+  const isLoading = ref(false) // 목록 전체(fetchAll)를 받아오는 중인지
+  const isCityLoading = ref(false) // 상세 화면이 도시 하나(ensureCity)를 채우는 중인지
   const error = ref(null)
   const lastFetched = ref(null) // 마지막으로 성공한 시각(ms)
   const isFallback = ref(false) // 통신 실패로 목업 데이터를 대신 쓰고 있는 상태인지
+
+  // "3분 전" 같은 상대시간은 lastFetched 가 아니라 "지금" 이 흘러서 달라진다.
+  // lastFetched 만 의존성으로 두면 computed 를 다시 계산할 계기가 없어서, 다음 갱신(10분 뒤)까지
+  // 화면이 "몇 초 전" 으로 굳는다. 그래서 시계 역할을 하는 ref 를 하나 두고 30초마다 깨운다.
+  // 스토어는 앱과 수명이 같아서 정리할 시점이 따로 없다. 화면에 두면 그 화면을 떠날 때 시계가 멈춘다.
+  const now = ref(Date.now())
+  useIntervalFn(() => (now.value = Date.now()), 30 * 1000)
+
+  // 진행 중인 fetchAll 의 Promise. 화면이 그릴 값이 아니므로 ref 로 두지 않는다(반응형일 이유가 없다).
+  let inflight = null
 
   // ===== getters =====
   // 도시 정보(cities) + 관측값(weatherMap)을 합쳐서, 과제 5 까지 화면들이 쓰던 weatherData 와 같은 모양으로 돌려준다.
@@ -63,8 +75,44 @@ export const useWeatherStore = defineStore('weather', () => {
   // 한 번이라도 데이터가 채워졌는지. 스켈레톤을 언제까지 보여줄지 판단한다.
   const hasData = computed(() => Object.keys(weatherMap.value).length > 0)
 
-  // "3분 전 기준" 문구
-  const lastFetchedLabel = computed(() => (lastFetched.value ? fromNow(lastFetched.value) : ''))
+  // 관측값이 실제로 도착한 도시만 남긴 목록.
+  // cityList 는 EMPTY_WEATHER 로 6칸을 항상 채운다 - 화면이 NaN 을 그리지 않게 하려는 장치인데,
+  // 집계에 그대로 넣으면 아직 안 온 도시의 0℃ 가 평균에 섞인다.
+  // 6곳이 다 도착하기 전(1~2초)에는 "평균 11.2℃" 같은 값이 잠깐 화면에 뜬다. 실제로 그랬다.
+  // 그릴 때 쓰는 목록과 집계할 때 쓰는 목록을 갈라서, 집계는 도착한 것만 본다.
+  const loadedCityList = computed(() => cityList.value.filter((city) => weatherMap.value[city.id]))
+
+  // 화면에 뜬 값 중 가장 오래된 관측 시각(ms). 없으면 null.
+  //
+  // 왜 lastFetched 가 아니라 이것을 쓰는가 - lastFetched 는 "우리가 요청한 시각" 이지 "관측한 시각" 이 아니다.
+  // 배포 후에는 Vercel 엣지 캐시가 앞에 서 있어서 둘이 갈라진다. 캐시가 살아 있는 동안 요청하면
+  // lastFetched 는 방금이 되지만 응답 본문은 몇 분 전에 원본에서 받아둔 것이다.
+  // 그 상태로 lastFetched 를 라벨에 쓰면 화면이 "몇 초 전 기준 · 실시간 관측" 이라고 말하면서
+  // 실제로는 몇 분 전 값을 보여준다. 로컬 개발에서는 Vite 프록시가 캐시를 안 하므로 절대 재현되지 않고,
+  // 배포 후에만 나타난다.
+  //
+  // OpenWeatherMap 응답의 dt(UNIX 초)가 관측 시각이다. api/weather.js 가 observedAt 으로 받아
+  // 스토어까지 올려두고 있었는데 어느 화면도 쓰지 않고 있었다.
+  // (과제 7 에서 icon 을 두고 지적한 것과 같은 상태였다 - 받아만 두고 화면에서 안 쓰는 데이터.)
+  //
+  // 가장 오래된 것을 고르는 이유 - 이 라벨은 대시보드 전체를 대표한다.
+  // 여섯 곳 중 한 곳이라도 오래된 값이면 "방금" 이라고 말해서는 안 된다.
+  const oldestObservedAt = computed(() => {
+    const stamps = loadedCityList.value
+      .map((city) => city.observedAt)
+      .filter((seconds) => typeof seconds === 'number' && seconds > 0)
+
+    return stamps.length ? Math.min(...stamps) * 1000 : null
+  })
+
+  // "3분 전" 문구. now 를 읽어야 시간이 흐를 때 다시 계산된다(위 주석 참고).
+  // 관측 시각이 있으면 그것을, 없으면(목업 폴백에는 dt 가 없다) 요청 시각으로 물러선다.
+  // 이름을 lastFetchedLabel 에서 바꿨다 - 이제 이 값이 가리키는 것은 "받은 시각" 이 아니라 "관측한 시각" 이다.
+  const observedLabel = computed(() => {
+    void now.value
+    const stamp = oldestObservedAt.value ?? lastFetched.value
+    return stamp ? fromNow(stamp) : ''
+  })
 
   // 과제 7. 도시 목록을 집계한 요약값.
   // 원래 이 계산식은 WeatherStatsView 안에만 있었다. 홈 상단에도 요약 타일을 넣으면서
@@ -74,8 +122,11 @@ export const useWeatherStore = defineStore('weather', () => {
   // 미세먼지 나쁨 개수는 여기에 넣지 않았다. 그 판정 기준(dustBadMin)은 사용자가 설정 화면에서 정하는 값이라
   // configStore 소관이고, weatherStore 가 configStore 를 끌어다 쓰면 스토어끼리 얽힌다.
   // 그래서 등급이 걸린 집계만 화면에서 configStore.dustGrade 로 센다 (통계 화면이 이미 쓰던 방식).
+  //
+  // 집계 대상은 loadedCityList 다. 한 곳도 안 왔으면 null 을 돌려준다 -
+  // 화면이 "값이 없는 상태" 를 v-if 하나로 구분할 수 있어야 0℃ 가 새어 나가지 않는다.
   const summary = computed(() => {
-    const list = cityList.value
+    const list = loadedCityList.value
     if (!list.length) return null
 
     // sort 는 원본 배열을 뒤집으므로 복사본을 만들어 정렬한다
@@ -130,32 +181,49 @@ export const useWeatherStore = defineStore('weather', () => {
   // 대시보드 진입 시 호출. 도시 6개 × 3 API = 18회.
   // force 가 아니면 캐시가 살아 있는 동안 아무것도 하지 않는다. 이게 호출 제한에 대한 1차 방어선이다.
   async function fetchAll({ force = false } = {}) {
+    // 진행 중인 요청이 있으면 그것을 그대로 돌려준다.
+    // 캐시(isFresh)는 "이미 받아둔 값" 을 막고, 이 가드는 "지금 받고 있는 중" 을 막는다. 서로 다른 구멍이다.
+    // 실제 시나리오: App.vue 의 첫 fetchAll 이 1.2~2초 도는 동안 새로고침 버튼을 누르면
+    // force: true 라 캐시를 그냥 지나쳐 18회가 한 벌 더 나간다. 버튼의 :loading 이 가려주고 있을 뿐,
+    // 상태를 지키는 일을 UI 에 맡기면 호출부가 늘어날 때마다 같은 구멍이 다시 생긴다.
+    if (inflight) return inflight
+
     const isFresh = lastFetched.value && Date.now() - lastFetched.value < CACHE_DURATION
     if (!force && isFresh && !isFallback.value) return
 
+    inflight = runFetchAll()
+    try {
+      return await inflight
+    } finally {
+      inflight = null
+    }
+  }
+
+  async function runFetchAll() {
     isLoading.value = true
     error.value = null
+    try {
+      // allSettled 를 쓰는 이유 : all 은 도시 하나만 실패해도 전체가 무너진다.
+      // 여섯 곳 중 다섯 곳이 성공했다면 그 다섯 곳은 보여주는 게 맞다.
+      // 과제 7. 이건 속도를 위한 장치가 아니라 기능을 위한 장치다.
+      // 바로 아래에서 실패한 개수를 세어 "전부 실패면 목업, 일부 실패면 알림만" 을 가른다.
+      // 순차 await 로 바꾸면 첫 실패에서 멈춰버려서 개수를 셀 수가 없고, 폴백 판정을 처음부터 다시 짜야 한다.
+      const results = await Promise.allSettled(cities.map((city) => fetchCity(city.id)))
+      const failed = results.filter((result) => result.status === 'rejected')
 
-    // allSettled 를 쓰는 이유 : all 은 도시 하나만 실패해도 전체가 무너진다.
-    // 여섯 곳 중 다섯 곳이 성공했다면 그 다섯 곳은 보여주는 게 맞다.
-    // 과제 7. 이건 속도를 위한 장치가 아니라 기능을 위한 장치다.
-    // 바로 아래에서 실패한 개수를 세어 "전부 실패면 목업, 일부 실패면 알림만" 을 가른다.
-    // 순차 await 로 바꾸면 첫 실패에서 멈춰버려서 개수를 셀 수가 없고, 폴백 판정을 처음부터 다시 짜야 한다.
-    const results = await Promise.allSettled(cities.map((city) => fetchCity(city.id)))
-    const failed = results.filter((result) => result.status === 'rejected')
-
-    if (failed.length === cities.length) {
-      // 전부 실패 = 키가 없거나 네트워크가 끊긴 상황. 목업으로 내려앉는다.
-      error.value = failed[0].reason?.message ?? '날씨 정보를 불러오지 못했습니다.'
-      useFallbackData()
-    } else {
-      isFallback.value = false
-      lastFetched.value = Date.now()
-      // 일부만 실패한 경우는 화면을 막지 않고 알림만 띄운다.
-      error.value = failed.length ? `${failed.length}개 도시의 정보를 받지 못했습니다.` : null
+      if (failed.length === cities.length) {
+        // 전부 실패 = 키가 없거나 네트워크가 끊긴 상황. 목업으로 내려앉는다.
+        error.value = failed[0].reason?.message ?? '날씨 정보를 불러오지 못했습니다.'
+        useFallbackData()
+      } else {
+        isFallback.value = false
+        lastFetched.value = Date.now()
+        // 일부만 실패한 경우는 화면을 막지 않고 알림만 띄운다.
+        error.value = failed.length ? `${failed.length}개 도시의 정보를 받지 못했습니다.` : null
+      }
+    } finally {
+      isLoading.value = false
     }
-
-    isLoading.value = false
   }
 
   // 상세 페이지처럼 도시 하나만 필요한 화면이 부른다.
@@ -164,7 +232,9 @@ export const useWeatherStore = defineStore('weather', () => {
   async function ensureCity(cityId) {
     if (weatherMap.value[cityId]) return
 
-    isLoading.value = true
+    // fetchAll 과 다른 깃발을 쓴다. 하나를 같이 쓰면 상세 화면의 로딩이 끝날 때
+    // 대시보드의 스켈레톤 판정(isLoading && !hasData)까지 같이 꺼진다. 두 화면의 사정은 서로 다르다.
+    isCityLoading.value = true
     try {
       await fetchCity(cityId)
       lastFetched.value = Date.now()
@@ -174,7 +244,7 @@ export const useWeatherStore = defineStore('weather', () => {
       error.value = caught.message ?? '날씨 정보를 불러오지 못했습니다.'
       useFallbackData()
     } finally {
-      isLoading.value = false
+      isCityLoading.value = false
     }
   }
 
@@ -200,14 +270,17 @@ export const useWeatherStore = defineStore('weather', () => {
     weatherMap,
     forecastMap,
     isLoading,
+    isCityLoading,
     error,
     lastFetched,
     isFallback,
     cityList,
+    loadedCityList,
     getCity,
     getForecastOf,
     hasData,
-    lastFetchedLabel,
+    oldestObservedAt,
+    observedLabel,
     summary,
     fetchCity,
     fetchAll,

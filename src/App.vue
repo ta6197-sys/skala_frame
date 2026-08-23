@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useOnline } from '@vueuse/core'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useWeatherStore } from '@/stores/weatherStore'
-import UnitToggler from '@/components/exercise/UnitToggler.vue'
+import UnitToggler from '@/components/common/UnitToggler.vue'
 
 // 과제 4. App.vue 는 화면을 직접 그리지 않는다.
 // - 위쪽: <RouterLink>들로 만든 Navigation Bar (a 태그와 달리 새로고침 없이 주소만 바꾼다)
@@ -68,7 +68,9 @@ const subMenu = [
         <el-tag :type="statusTag.type" size="small" effect="light" round>
           {{ statusTag.text }}
         </el-tag>
-        <el-tag type="info" size="small" effect="plain">과제 6 · Axios</el-tag>
+        <!-- 과제 번호 태그. 한 단원을 끝낼 때마다 여기와 index.html 의 <title> 이 같이 낡는다.
+             단원 하나를 가리키는 대신 지금까지 쌓인 범위를 적어서, 다음 과제에서 숫자만 늘리면 되게 둔다. -->
+        <el-tag type="info" size="small" effect="plain">과제 1~8 통합</el-tag>
         <UnitToggler />
       </div>
     </header>

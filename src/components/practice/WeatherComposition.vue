@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, watchEffect } from 'vue'
+import { logDev } from '@/utils/devLog'
 import { weatherData } from '@/data/weatherData'
 
 // 과제 2: 날씨 (Composition API) 통합 완성본
@@ -34,13 +35,11 @@ const filteredWeatherList = computed(() =>
 )
 
 watch(selectedCityInfo, (newVal) => {
-  console.log(
-    `[watch 감지] 상태 바 문구가 업데이트되었습니다 -> "${newVal?.name}가 선택되었습니다"`,
-  )
+  logDev(`[watch 감지] 상태 바 문구가 업데이트되었습니다 -> "${newVal?.name}가 선택되었습니다"`)
 })
 
 watchEffect(() => {
-  console.log(
+  logDev(
     `[watchEffect 자동 호출] 현재 검색어 '${searchQuery.value}'에 매칭되는 API 데이터를 필터링합니다`,
   )
 })
@@ -49,7 +48,7 @@ watchEffect(() => {
 const favoriteCount = computed(() => favorites.value.length)
 
 watch(favoriteCount, (newVal, oldVal) => {
-  console.log(`[watch] 즐겨찾기 개수가 ${oldVal}개 -> ${newVal}개로 변경되었습니다`)
+  logDev(`[watch] 즐겨찾기 개수가 ${oldVal}개 -> ${newVal}개로 변경되었습니다`)
 })
 </script>
 

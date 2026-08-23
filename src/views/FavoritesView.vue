@@ -1,10 +1,17 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+// 과제 8. 온디맨드 전환 후 추가한 두 줄.
+// <el-xxx> 태그는 플러그인이 템플릿에서 찾아 CSS 까지 같이 붙여주지만, ElMessage / ElMessageBox 는
+// 템플릿이 아니라 코드에서 부르는 것이라 플러그인 눈에 띄지 않는다. 스타일을 직접 챙겨야 한다.
+// (안 붙이면 에러 없이 흰 배경에 테두리 없는 알림이 뜬다 - 실제로 그렇게 한 번 나왔다)
+import 'element-plus/theme-chalk/el-message.css'
+import 'element-plus/theme-chalk/el-message-box.css'
+import 'element-plus/theme-chalk/el-overlay.css'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useRecentStore } from '@/stores/recentStore'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
-import WeatherCard from '@/components/exercise/WeatherCard.vue'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
+import WeatherCard from '@/components/weather/WeatherCard.vue'
 
 // 과제 5(요구사항 4). 과제 4 때는 favorites 가 홈의 지역 상태라 만들 수 없었던 화면.
 // 스토어로 올리고 나니 이 view 는 상태를 하나도 갖지 않고 스토어만 읽으면 끝난다.

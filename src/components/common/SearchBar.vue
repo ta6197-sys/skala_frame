@@ -39,7 +39,9 @@ const onSearchInput = (value) => {
 
     <p class="search-result">
       검색 중인 도시: <strong>{{ searchQuery || '(전체)' }}</strong>
-      <span class="hint">— 검색어는 주소창(?search=)이 원본이다. 새로고침·뒤로가기에도 유지된다.</span>
+      <span class="hint"
+        >— 검색어는 주소창(?search=)이 원본이다. 새로고침·뒤로가기에도 유지된다.</span
+      >
     </p>
   </div>
 </template>

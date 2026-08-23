@@ -1,15 +1,17 @@
 <script setup>
 import { ref, computed, watch, watchEffect } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useGeolocation, useIntervalFn, useOnline } from '@vueuse/core'
+import { useRouter } from 'vue-router'
+import { useIntervalFn, useOnline } from '@vueuse/core'
 import { useWeatherStore } from '@/stores/weatherStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useRecentStore } from '@/stores/recentStore'
 import { useConfigStore } from '@/stores/configStore'
-import { getCurrentWeather, getPlaceName } from '@/api/weather'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
-import SearchBar from '@/components/exercise/SearchBar.vue'
-import WeatherCard from '@/components/exercise/WeatherCard.vue'
+import { useQueryParam } from '@/composables/useQueryParam'
+import { useMyLocation } from '@/composables/useMyLocation'
+import { logDev } from '@/utils/devLog'
+import BaseDashboardCard from '@/components/common/BaseDashboardCard.vue'
+import SearchBar from '@/components/common/SearchBar.vue'
+import WeatherCard from '@/components/weather/WeatherCard.vue'
 
 // 과제 4. 과제 3 의 WeatherParent 를 "/" 경로의 페이지 컴포넌트로 승격시킨 화면.
 // 과제 5. 즐겨찾기/최근 본 도시는 스토어로 옮기고, 이 화면에는 검색 상태만 남겼다.
@@ -19,7 +21,12 @@ import WeatherCard from '@/components/exercise/WeatherCard.vue'
 //   1) fetchAll() 호출이 여기서 사라졌다. App.vue 한 곳으로 올렸다.
 //      이 화면은 이제 데이터를 "받아오는" 일에도 관여하지 않고 오로지 읽고 그리기만 한다.
 //   2) 검색어를 주소창 단방향으로 바꿨다. 아래 설명 참고.
-const route = useRoute()
+//
+// 정리. 이 화면이 한 파일에서 하던 일이 여섯 가지였다(검색어 URL 동기화 · 지오로케이션 2단 API ·
+// 자동 갱신 · 요약 집계 · 선택 상태 · 로깅). 그중 스스로 완결되는 두 덩어리를 composable 로 내보냈다.
+//   - 검색어 ↔ 주소창  → composables/useQueryParam.js  (상세 화면의 ?preview= 와 같은 패턴이라 공유한다)
+//   - 내 위치 날씨      → composables/useMyLocation.js
+// 남은 것은 "스토어에서 읽어 화면에 배치하는 일" 이다. 그게 view 가 할 일이다.
 const router = useRouter()
 const weatherStore = useWeatherStore()
 const favoritesStore = useFavoritesStore()
@@ -27,26 +34,11 @@ const recentStore = useRecentStore()
 const configStore = useConfigStore()
 
 // ===== 검색어 (과제 7 - 단방향 전환) =====
-// 과제 6 까지는 이랬다.
-//   - onMounted 에서 route.query.search → searchQuery  (URL → 상태)
-//   - watch(searchQuery) 에서 searchQuery → router.replace  (상태 → URL)
-// 값 하나에 저장소가 둘이고 서로를 갱신하는 구조였다. replace 라서 무한루프는 안 났지만,
-// 뒤로가기로 주소가 바뀌면 화면이 안 따라왔다. onMounted 는 이미 끝난 뒤라서.
-//
-// 이제 주소창 하나를 원본으로 삼는다. 화면은 거기서 파생만 한다.
+// 주소창 하나를 원본으로 삼고 화면은 거기서 파생만 한다.
 //   입력 → router.replace → route.query → computed → 화면
-// 흐름이 한 방향이고, 상태를 복원하는 코드도 동기화하는 watch 도 둘 다 없어졌다.
-// 새로고침·링크 공유·뒤로가기가 전부 자동으로 맞는다.
-const searchQuery = computed(() => String(route.query.search ?? ''))
-
-const handleUpdateQuery = (newQuery) => {
-  // 상태를 고치는 게 아니라 주소를 고친다. 그러면 위 computed 가 알아서 따라온다.
-  // push 가 아니라 replace 인 이유 - 글자 하나마다 히스토리가 쌓이면 뒤로가기가 먹통이 된다.
-  router.replace({
-    path: route.path,
-    query: { search: newQuery || undefined },
-  })
-}
+// 그 흐름 자체는 useQueryParam 이 들고 있다. 여기에는 "이 화면이 쓰는 키는 search 다" 만 남는다.
+// (과제 7 이전에는 ref 와 주소창 두 곳에 값이 있었고, 뒤로가기로 주소만 바뀌면 화면이 따라오지 못했다.)
+const { value: searchQuery, setValue: handleUpdateQuery } = useQueryParam('search')
 
 // 과제 6 : 10분마다 자동 갱신. 캐시 유효시간과 같은 간격이라 화면을 켜둔 채로 두면 계속 최신값이 된다.
 // setInterval 을 직접 쓰면 화면을 떠날 때 clearInterval 을 잊기 쉬운데, useIntervalFn 은 언마운트 시 알아서 멈춘다.
@@ -57,48 +49,14 @@ useIntervalFn(() => weatherStore.refresh(), 10 * 60 * 1000)
 const isOnline = useOnline()
 
 // ===== 내 위치 날씨 (요구사항 2 - 역지오코딩 API) =====
-// 이 화면에서만 쓰는 값이라 스토어로 올리지 않는다. 다른 화면은 내 위치를 궁금해하지 않는다.
-// immediate: false - 화면에 들어오자마자 위치 권한 팝업을 띄우면 무례하다. 버튼을 눌렀을 때만 물어본다.
-const { coords, error: geoError, resume } = useGeolocation({ immediate: false })
-
-const myPlace = ref(null) // { name, temp, feelsLike, status, humidity }
-const isLocating = ref(false)
-const myPlaceError = ref('')
-
-const requestMyLocation = () => {
-  isLocating.value = true
-  myPlaceError.value = ''
-  resume() // 여기서 브라우저 권한 팝업이 뜬다
-}
-
-// 좌표가 잡히면 두 API 를 이어서 부른다 : 좌표 → 한글 지명(역지오코딩) + 그 좌표의 현재 날씨.
-// useGeolocation 은 권한을 받기 전까지 좌표를 Infinity 로 채워두므로 유효한 값인지 먼저 걸러야 한다.
-watch(coords, async (newCoords) => {
-  const { latitude, longitude } = newCoords
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
-
-  try {
-    const [name, current] = await Promise.all([
-      getPlaceName({ lat: latitude, lon: longitude }),
-      getCurrentWeather({ lat: latitude, lon: longitude }),
-    ])
-    myPlace.value = { name, ...current }
-  } catch (error) {
-    myPlaceError.value = error.message
-  } finally {
-    isLocating.value = false
-  }
-})
-
-// 권한을 거부하면 좌표가 영영 오지 않는다. 그때는 로딩 표시를 풀고 안내 문구로 바꾼다.
-watch(geoError, (newError) => {
-  if (!newError) return
-  isLocating.value = false
-  myPlaceError.value =
-    newError.code === 1
-      ? '위치 권한이 거부되었습니다. 아래 도시 목록은 그대로 사용할 수 있습니다.'
-      : '위치를 확인하지 못했습니다.'
-})
+// 권한 요청 · 좌표 유효성 · 지명/날씨 2단 호출 · 거부 처리까지가 composable 안에 있다.
+// 이 화면은 "버튼을 누르면 request(), 결과는 place 에 담긴다" 만 알면 된다.
+const {
+  place: myPlace,
+  isLocating,
+  errorMessage: myPlaceError,
+  request: requestMyLocation,
+} = useMyLocation()
 
 // 선택된 도시 (하단 상태바용) - 이 화면 안에서만 쓰는 값이라 스토어로 올리지 않고 지역 상태로 둔다.
 const selectedCityInfo = ref(null)
@@ -130,15 +88,13 @@ const dustBadCount = computed(
 )
 
 watch(selectedCityInfo, (newVal) => {
-  console.log(
-    `[watch 감지] 상태 바 문구가 업데이트되었습니다 -> "${newVal?.name}가 선택되었습니다"`,
-  )
+  logDev(`[watch 감지] 상태 바 문구가 업데이트되었습니다 -> "${newVal?.name}가 선택되었습니다"`)
 })
 
 // 과제 2 요구사항 3. searchQuery 가 computed 로 바뀌어도 watchEffect 는 그대로 추적한다.
 // (반응형 소스가 ref 든 computed 든 watchEffect 는 읽은 것을 알아서 의존성으로 잡는다)
 watchEffect(() => {
-  console.log(
+  logDev(
     `[watchEffect 자동 호출] 현재 검색어 '${searchQuery.value}'에 매칭되는 API 데이터를 필터링합니다`,
   )
 })
@@ -147,7 +103,7 @@ watchEffect(() => {
 watch(
   () => favoritesStore.favoriteCount,
   (newVal, oldVal) => {
-    console.log(`[watch] 즐겨찾기 개수가 ${oldVal}개 -> ${newVal}개로 변경되었습니다`)
+    logDev(`[watch] 즐겨찾기 개수가 ${oldVal}개 -> ${newVal}개로 변경되었습니다`)
   },
 )
 </script>
@@ -170,8 +126,11 @@ watch(
       </el-tag>
       <span class="sync-time">
         <template v-if="weatherStore.isLoading">불러오는 중...</template>
-        <template v-else-if="weatherStore.lastFetched">
-          {{ weatherStore.lastFetchedLabel }} 기준
+        <!-- "받은 시각" 이 아니라 "관측 시각" 을 말한다.
+             엣지 캐시가 앞에 서 있으면 둘이 갈라지는데, 요청 시각을 쓰면 화면이
+             "몇 초 전 · 실시간 관측" 이라고 하면서 실제로는 몇 분 전 값을 보여준다. -->
+        <template v-else-if="weatherStore.observedLabel">
+          {{ weatherStore.observedLabel }} 관측
         </template>
       </span>
       <el-button
@@ -265,7 +224,12 @@ watch(
     <!-- 여기서부터는 곁들이는 정보. 위의 본체와 눈으로 끊어준다. -->
     <div class="section-divider" role="presentation"></div>
 
-    <!-- 과제 7 추가 : 도시 6곳을 한 줄로 요약. 계산은 weatherStore.summary 가 하고 통계 화면과 공유한다 -->
+    <!-- 과제 7 추가 : 도시 6곳을 한 줄로 요약. 계산은 weatherStore.summary 가 하고 통계 화면과 공유한다.
+         과제 8 이전에는 이 줄이 v-if="summary" 뿐이었고, 첫 진입 1~2초 동안
+         "평균 기온 0.0℃ · 가장 더운 곳 서울 0.0℃" 가 그대로 노출됐다.
+         cityList 가 EMPTY_WEATHER 로 6칸을 항상 채우기 때문에 통신 전에도 summary 가 null 이 아니었던 것이다.
+         (바로 위 카드 그리드는 isFirstLoading 으로 스켈레톤을 깔고 있는데 이 줄만 빠져 있었다.)
+         이제 summary 는 "도착한 도시" 만 집계하고 한 곳도 없으면 null 이라, v-if 하나로 갈린다. -->
     <div v-if="summary" class="summary-row">
       <el-card class="summary-tile" shadow="never">
         <!-- el-statistic 의 기본 precision 은 0 이라 24.9 가 25 로 반올림된다. 소수 한 자리를 그대로 보여준다 -->
@@ -282,10 +246,16 @@ watch(
           <template #title>평균 습도</template>
         </el-statistic>
       </el-card>
+      <!-- 누르면 상세로 넘어가는 타일이라 실제로 버튼이다. div 에 @click 만 걸면 키보드로는 닿지 않는다.
+           el-card 안에 다른 컨트롤이 없어서 role="button" 을 그대로 붙일 수 있다(카드 쪽과 다른 점). -->
       <el-card
         class="summary-tile summary-tile-link"
         shadow="never"
+        role="button"
+        tabindex="0"
         @click="handleClickDetail(summary.hottest.id)"
+        @keydown.enter.prevent="handleClickDetail(summary.hottest.id)"
+        @keydown.space.prevent="handleClickDetail(summary.hottest.id)"
       >
         <el-statistic
           :value="configStore.convertTemp(summary.hottest.temp)"
@@ -306,79 +276,83 @@ watch(
          전부 과제 산출물이라 없애지 않고 자리만 옮긴다 - 내 위치(과제 6),
          즐겨찾기 / 최근 본 도시(과제 5 본인 추가 스토어의 유일한 노출면). -->
     <div class="utility-grid">
-        <!-- 과제 6 추가 : 브라우저 위치 → 역지오코딩으로 한글 지명 → 그 좌표의 실제 날씨 -->
-        <BaseDashboardCard>
-          <template v-slot:title>내 위치 날씨</template>
-          <div v-if="myPlace" class="myplace-row">
-            <div>
-              <p class="myplace-name">{{ myPlace.name }}</p>
-              <p class="myplace-desc">
-                {{ myPlace.temp }}℃ (체감 {{ myPlace.feelsLike }}℃) · {{ myPlace.status }} · 습도
-                {{ myPlace.humidity }}%
-              </p>
-            </div>
-            <el-button size="small" @click="requestMyLocation">다시 확인</el-button>
-          </div>
-          <div v-else class="myplace-row">
+      <!-- 과제 6 추가 : 브라우저 위치 → 역지오코딩으로 한글 지명 → 그 좌표의 실제 날씨 -->
+      <BaseDashboardCard>
+        <template v-slot:title>내 위치 날씨</template>
+        <div v-if="myPlace" class="myplace-row">
+          <div>
+            <p class="myplace-name">{{ myPlace.name }}</p>
             <p class="myplace-desc">
-              <template v-if="isLocating">위치를 확인하는 중입니다...</template>
-              <template v-else-if="myPlaceError">{{ myPlaceError }}</template>
-              <template v-else
-                >브라우저 위치 권한을 허용하면 지금 있는 곳의 날씨를 보여줍니다.</template
-              >
+              {{ myPlace.temp }}℃ (체감 {{ myPlace.feelsLike }}℃) · {{ myPlace.status }} · 습도
+              {{ myPlace.humidity }}%
             </p>
-            <el-button
-              size="small"
-              type="primary"
-              plain
-              :loading="isLocating"
-              @click="requestMyLocation"
-            >
-              내 위치 확인
-            </el-button>
           </div>
-        </BaseDashboardCard>
+          <el-button size="small" @click="requestMyLocation">다시 확인</el-button>
+        </div>
+        <div v-else class="myplace-row">
+          <p class="myplace-desc">
+            <template v-if="isLocating">위치를 확인하는 중입니다...</template>
+            <template v-else-if="myPlaceError">{{ myPlaceError }}</template>
+            <template v-else
+              >브라우저 위치 권한을 허용하면 지금 있는 곳의 날씨를 보여줍니다.</template
+            >
+          </p>
+          <el-button
+            size="small"
+            type="primary"
+            plain
+            :loading="isLocating"
+            @click="requestMyLocation"
+          >
+            내 위치 확인
+          </el-button>
+        </div>
+      </BaseDashboardCard>
 
-        <!-- 즐겨찾기 요약 : 같은 껍데기를 재사용 -->
-        <BaseDashboardCard>
-          <template v-slot:title>즐겨찾기</template>
-          <div class="favorite-row">
-            <span class="favorite-list">
-              <span v-if="favoritesStore.favoriteCount">
-                {{ favoritesStore.favoriteCities.map((city) => city.name).join(', ') }}
-                ({{ favoritesStore.favoriteCount }}개)
-              </span>
-              <span v-else>카드 왼쪽 체크박스로 즐겨찾기를 등록해 보세요.</span>
+      <!-- 즐겨찾기 요약 : 같은 껍데기를 재사용 -->
+      <BaseDashboardCard>
+        <template v-slot:title>즐겨찾기</template>
+        <div class="favorite-row">
+          <span class="favorite-list">
+            <span v-if="favoritesStore.favoriteCount">
+              {{ favoritesStore.favoriteCities.map((city) => city.name).join(', ') }}
+              ({{ favoritesStore.favoriteCount }}개)
             </span>
-            <el-button
-              size="small"
-              :disabled="favoritesStore.favoriteCount === 0"
-              @click="favoritesStore.clearFavorites"
-            >
-              즐겨찾기 비우기
-            </el-button>
-          </div>
-        </BaseDashboardCard>
+            <span v-else>카드 왼쪽 체크박스로 즐겨찾기를 등록해 보세요.</span>
+          </span>
+          <el-button
+            size="small"
+            :disabled="favoritesStore.favoriteCount === 0"
+            @click="favoritesStore.clearFavorites"
+          >
+            즐겨찾기 비우기
+          </el-button>
+        </div>
+      </BaseDashboardCard>
 
-        <!-- 과제 5 추가 : 상세 페이지에서 기록해둔 방문 이력을 여기서 꺼내 쓴다 -->
-        <BaseDashboardCard v-if="recentStore.hasRecent">
-          <template v-slot:title>최근 본 도시</template>
-          <div class="recent-row">
-            <el-tag
-              v-for="city in recentStore.recentCities"
-              :key="city.id"
-              class="recent-chip"
-              effect="plain"
-              round
-              @click="handleClickDetail(city.id)"
-            >
-              {{ city.name }}
-            </el-tag>
-            <el-button link type="info" class="recent-clear" @click="recentStore.clearRecent">
-              기록 지우기
-            </el-button>
-          </div>
-        </BaseDashboardCard>
+      <!-- 과제 5 추가 : 상세 페이지에서 기록해둔 방문 이력을 여기서 꺼내 쓴다 -->
+      <BaseDashboardCard v-if="recentStore.hasRecent">
+        <template v-slot:title>최근 본 도시</template>
+        <div class="recent-row">
+          <el-tag
+            v-for="city in recentStore.recentCities"
+            :key="city.id"
+            class="recent-chip"
+            effect="plain"
+            round
+            role="button"
+            tabindex="0"
+            @click="handleClickDetail(city.id)"
+            @keydown.enter.prevent="handleClickDetail(city.id)"
+            @keydown.space.prevent="handleClickDetail(city.id)"
+          >
+            {{ city.name }}
+          </el-tag>
+          <el-button link type="info" class="recent-clear" @click="recentStore.clearRecent">
+            기록 지우기
+          </el-button>
+        </div>
+      </BaseDashboardCard>
     </div>
 
     <div class="status-bar">
