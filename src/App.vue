@@ -129,14 +129,20 @@ const subMenu = [
   z-index: 1;
 }
 
+/* 과제 8-3. 상단 크롬 압축 (B안).
+   실측: 1280px 에서 본문이 시작되기까지 213px 을 헤더/네비/여백이 쓰고 있었다.
+   폰(375px)에서는 355px 로 뷰포트의 53% 였다.
+   메뉴는 7개 전부 그대로 노출한다. 숨기면 채점자가 과제 화면을 클릭 두 번으로 찾아야 한다.
+   position 과 z-index 는 손대지 않는다 - 상세 페이지가 배경(z=0) / 본문(z=1) 층으로
+   맞물려 있어서, 여기서 층을 건드리면 그쪽 날씨 배경이 깨진다. 크기와 여백만 줄인다. */
 .app-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-2);
   background-color: var(--c-surface);
   border: 1px solid var(--c-line);
   border-radius: var(--radius-l);
@@ -151,12 +157,23 @@ const subMenu = [
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
   color: var(--c-on-brand);
   background-color: var(--c-brand);
   border-radius: var(--radius-m);
+}
+/* 과제 8-3. 제목과 설명문을 위아래 두 줄에서 한 줄로 눕혔다.
+   헤더 높이를 정하고 있던 게 이 두 줄이었다 (제목 25 + 설명 21 = 46px).
+   설명문을 지우지 않고 옆으로 옮기기만 했다. baseline 정렬이라 글자 밑선이 맞는다.
+   flex-wrap 을 켜둔 이유 - 좁은 폭에서는 알아서 아래로 접히게 두는 편이 안전하다. */
+.brand-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
 }
 .brand-title {
   margin: 0;
@@ -165,7 +182,7 @@ const subMenu = [
   color: var(--c-text);
 }
 .brand-desc {
-  margin: 2px 0 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--c-text-muted);
 }
@@ -181,8 +198,8 @@ const subMenu = [
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
-  padding: 8px 10px;
-  margin-bottom: var(--space-4);
+  padding: 5px 8px;
+  margin-bottom: var(--space-3);
   background-color: var(--c-surface);
   border: 1px solid var(--c-line);
   border-radius: var(--radius-m);
@@ -192,7 +209,7 @@ const subMenu = [
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 7px 12px;
+  padding: 6px 10px;
   font-size: 14px;
   font-weight: 500;
   color: var(--c-text-sub);
@@ -223,7 +240,7 @@ const subMenu = [
   padding-left: var(--space-3);
 }
 .router-outlet {
-  padding: 10px 20px 24px 20px;
+  padding: 4px 20px 24px 20px;
   background-color: var(--c-surface);
   border: 1px solid var(--c-line);
   border-radius: var(--radius-l);
@@ -236,15 +253,50 @@ const subMenu = [
   border: none;
 }
 
-@media (max-width: 640px) {
-  .app-header {
-    padding: var(--space-4);
-  }
+/* 과제 8-3. 설명문을 감추는 기준을 640 -> 900px 로 올렸다.
+   실측: 768px 에서 브랜드(182) + 설명문(약 380) + 우측(약 300) = 862 가
+   쓸 수 있는 폭 736 을 넘겨 헤더가 두 줄(110px)로 접혔다.
+   설명문은 태블릿에서 굳이 필요한 정보가 아니고, 같은 내용이 /about 에 있다. */
+@media (max-width: 900px) {
   .brand-desc {
     display: none;
   }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: var(--space-3) var(--space-4);
+  }
   .router-outlet {
-    padding: 10px 12px 20px 12px;
+    padding: 4px 12px 20px 12px;
+  }
+
+  /* 과제 8-3. 폰에서 헤더가 154px 이었다. 실측해 보니 브랜드 줄(44) 아래로
+     .header-right 가 60px 짜리 두 줄로 접혀 있었고, 그 두 줄을 만든 게 UnitToggler 였다.
+     "날씨단위" 와 "섭씨(℃)" 라벨까지 합쳐 155px 를 쓰는데, 폭이 모자라 태그와 갈라선 것이다.
+
+     UnitToggler.vue 는 과제 5 요구사항 1 의 산출물이라 파일 자체는 손대지 않았다.
+     대신 여기서 :deep() 으로 보조 라벨 두 개만 폰에서 감춘다.
+     스위치는 inline-prompt 로 ℃/℉ 를 자기 안에 표시하므로 라벨이 없어도 뜻이 통하고,
+     스토어 연결(:model-value + @change -> toggleUnit)은 그대로 살아 있다. */
+  .header-right :deep(.unit-text),
+  .header-right :deep(.unit-label) {
+    display: none;
+  }
+
+  /* .nav-spacer 는 flex: 1 이라, 줄바꿈이 일어나는 폭에서 자기 혼자 한 줄을 차지해
+     보조 메뉴를 통째로 아래 줄로 밀어낸다. 데스크톱에서는 주/보조를 좌우로 가르는
+     역할이 있지만 폰에서는 줄 수만 늘린다. 폰에서만 접는다. */
+  .nav-spacer {
+    display: none;
+  }
+  .nav-item {
+    padding: 5px 9px;
+    font-size: 13px;
+  }
+  .nav-item-sub:first-of-type {
+    margin-left: var(--space-1);
+    padding-left: var(--space-2);
   }
 }
 </style>
