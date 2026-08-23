@@ -31,7 +31,7 @@ export const troubleshootingList = [
   {
     id: 'ts_03',
     task: '과제 5',
-    title: '강사님 예시 코드를 그대로 옮겼더니 props is not defined 에러',
+    title: '교수님 예시 코드를 그대로 옮겼더니 props is not defined 에러',
     symptom:
       '단위 변환 computed 를 만들면서 예시 코드의 props.cityItem.temp 를 그대로 복사했더니 화면이 뜨지 않고 콘솔에 ReferenceError: props is not defined 가 찍혔다.',
     cause:
@@ -232,7 +232,7 @@ export const troubleshootingList = [
     cause:
       'searchQuery 라는 ref 를 두고 onMounted 에서 주소 → 상태로 한 번 복원하고, watch 에서 상태 → 주소로 계속 밀어넣고 있었다. 값 하나에 저장소가 둘이고 서로를 갱신하는 구조였다. onMounted 는 처음 한 번만 돌기 때문에, 이후 주소가 바뀌어도 상태는 따라오지 않았다.',
     solution:
-      '주소창 하나를 원본으로 정하고 화면은 computed 로 파생만 하게 바꿨다. const searchQuery = computed(() => String(route.query.search ?? "")) 로 읽고, 입력이 오면 상태가 아니라 router.replace 로 주소를 고친다. 흐름이 입력 → 주소 → computed → 화면 한 방향이 되면서 복원 코드와 동기화 watch 가 둘 다 사라졌고, 새로고침·링크 공유·뒤로가기가 전부 자동으로 맞게 됐다. 강사님 참고 파일에도 같은 자리에 onMounted + watch 조합이 있고 "KeepAlive 를 적용해야만 동작함" 이라는 주석이 달려 있는데, 원본을 하나로 정하면 KeepAlive 없이도 해결되는 문제였다.',
+      '주소창 하나를 원본으로 정하고 화면은 computed 로 파생만 하게 바꿨다. const searchQuery = computed(() => String(route.query.search ?? "")) 로 읽고, 입력이 오면 상태가 아니라 router.replace 로 주소를 고친다. 흐름이 입력 → 주소 → computed → 화면 한 방향이 되면서 복원 코드와 동기화 watch 가 둘 다 사라졌고, 새로고침·링크 공유·뒤로가기가 전부 자동으로 맞게 됐다. 교수님 참고 파일에도 같은 자리에 onMounted + watch 조합이 있고 "KeepAlive 를 적용해야만 동작함" 이라는 주석이 달려 있는데, 원본을 하나로 정하면 KeepAlive 없이도 해결되는 문제였다.',
     tags: ['단방향', 'vue-router', 'computed', 'watch'],
     status: 'solved',
   },
