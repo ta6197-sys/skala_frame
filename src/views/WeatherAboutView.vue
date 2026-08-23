@@ -16,7 +16,7 @@ const routeList = [
   { path: '/weather/:cityId', desc: '도시 코드로 매칭되는 상세 관측 페이지' },
   { path: '/favorites', desc: '스토어에 담아둔 즐겨찾기 도시 모아보기' },
   { path: '/settings', desc: '더움 기준 온도 · 미세먼지 경계 · 체질을 직접 정하는 화면' },
-  { path: '/stats', desc: '도시 6곳을 집계한 통계 페이지' },
+  { path: '/stats', desc: '도시 7곳을 집계한 통계 페이지' },
   { path: '/troubleshooting', desc: '과제를 진행하며 막혔던 지점 기록' },
   { path: '/:pathMatch(.*)*', desc: '없는 주소를 모두 흡수하는 404 페이지' },
 ]

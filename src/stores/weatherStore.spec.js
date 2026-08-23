@@ -24,9 +24,9 @@ describe('weatherStore.summary', () => {
     setActivePinia(createPinia())
   })
 
-  it('그릴 목록은 6칸을 채우지만 집계 목록은 도착한 것만 센다', () => {
+  it('그릴 목록은 도시 수만큼 채우지만 집계 목록은 도착한 것만 센다', () => {
     const store = useWeatherStore()
-    // cityList 는 화면이 NaN 을 그리지 않도록 EMPTY_WEATHER 로 6칸을 만든다.
+    // cityList 는 화면이 NaN 을 그리지 않도록 EMPTY_WEATHER 로 cities.length 칸을 만든다.
     expect(store.cityList).toHaveLength(cities.length)
     // 집계는 그 6칸을 믿으면 안 된다. 안 온 도시의 0℃ 가 평균에 섞인다.
     expect(store.loadedCityList).toHaveLength(0)
@@ -66,7 +66,7 @@ describe('weatherStore.summary', () => {
     store.weatherMap = Object.fromEntries(
       cities.map((city, index) => [city.id, observation({ humidity: index === 0 ? 61 : 60 })]),
     )
-    // (61 + 60*5) / 6 = 60.1666... → 60
+    // (61 + 60*6) / 7 = 60.1428... → 60
     expect(store.summary.avgHumidity).toBe(60)
   })
 

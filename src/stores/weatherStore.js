@@ -29,7 +29,7 @@ const EMPTY_WEATHER = {
   observedAt: null,
 }
 
-// 같은 데이터를 10분 안에 다시 받아올 이유가 없다. 화면을 오갈 때마다 18회씩 호출하면 분당 60회 제한에 걸린다.
+// 같은 데이터를 10분 안에 다시 받아올 이유가 없다. 화면을 오갈 때마다 21회씩 호출하면 분당 60회 제한에 걸린다.
 const CACHE_DURATION = 10 * 60 * 1000
 
 export const useWeatherStore = defineStore('weather', () => {
@@ -78,7 +78,7 @@ export const useWeatherStore = defineStore('weather', () => {
   // 관측값이 실제로 도착한 도시만 남긴 목록.
   // cityList 는 EMPTY_WEATHER 로 6칸을 항상 채운다 - 화면이 NaN 을 그리지 않게 하려는 장치인데,
   // 집계에 그대로 넣으면 아직 안 온 도시의 0℃ 가 평균에 섞인다.
-  // 6곳이 다 도착하기 전(1~2초)에는 "평균 11.2℃" 같은 값이 잠깐 화면에 뜬다. 실제로 그랬다.
+  // 도시들이 다 도착하기 전(1~2초)에는 "평균 11.2℃" 같은 값이 잠깐 화면에 뜬다. 실제로 그랬다.
   // 그릴 때 쓰는 목록과 집계할 때 쓰는 목록을 갈라서, 집계는 도착한 것만 본다.
   const loadedCityList = computed(() => cityList.value.filter((city) => weatherMap.value[city.id]))
 
@@ -96,7 +96,7 @@ export const useWeatherStore = defineStore('weather', () => {
   // (과제 7 에서 icon 을 두고 지적한 것과 같은 상태였다 - 받아만 두고 화면에서 안 쓰는 데이터.)
   //
   // 가장 오래된 것을 고르는 이유 - 이 라벨은 대시보드 전체를 대표한다.
-  // 여섯 곳 중 한 곳이라도 오래된 값이면 "방금" 이라고 말해서는 안 된다.
+  // 그중 한 곳이라도 오래된 값이면 "방금" 이라고 말해서는 안 된다.
   const oldestObservedAt = computed(() => {
     const stamps = loadedCityList.value
       .map((city) => city.observedAt)
@@ -178,7 +178,7 @@ export const useWeatherStore = defineStore('weather', () => {
     return weatherMap.value[cityId]
   }
 
-  // 대시보드 진입 시 호출. 도시 6개 × 3 API = 18회.
+  // 대시보드 진입 시 호출. 도시 7개 × 3 API = 21회.
   // force 가 아니면 캐시가 살아 있는 동안 아무것도 하지 않는다. 이게 호출 제한에 대한 1차 방어선이다.
   async function fetchAll({ force = false } = {}) {
     // 진행 중인 요청이 있으면 그것을 그대로 돌려준다.
@@ -204,7 +204,7 @@ export const useWeatherStore = defineStore('weather', () => {
     error.value = null
     try {
       // allSettled 를 쓰는 이유 : all 은 도시 하나만 실패해도 전체가 무너진다.
-      // 여섯 곳 중 다섯 곳이 성공했다면 그 다섯 곳은 보여주는 게 맞다.
+      // 그중 대부분이 성공했다면 그만큼은 보여주는 게 맞다.
       // 과제 7. 이건 속도를 위한 장치가 아니라 기능을 위한 장치다.
       // 바로 아래에서 실패한 개수를 세어 "전부 실패면 목업, 일부 실패면 알림만" 을 가른다.
       // 순차 await 로 바꾸면 첫 실패에서 멈춰버려서 개수를 셀 수가 없고, 폴백 판정을 처음부터 다시 짜야 한다.

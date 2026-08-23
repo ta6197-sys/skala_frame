@@ -1,5 +1,5 @@
 // 과제 1. 날씨 Mockup 공용 데이터
-// - 기본 3개(서울/수원/부산)에 본인 데이터(제주/강릉/대구)를 추가했다.
+// - 기본 3개(서울/수원/부산)에 본인 데이터(제주/강릉/대구/광주)를 추가했다.
 // - 25도 위/아래, 미세먼지 좋음/보통/나쁨이 모두 화면에 나오도록 값을 배분했다.
 export const weatherData = [
   {
@@ -67,5 +67,16 @@ export const weatherData = [
     feelsLike: 36,
     wind: 1.2,
     rainProb: 0,
+  },
+  {
+    id: 'city_07',
+    name: '광주',
+    temp: 29,
+    status: '맑음',
+    humidity: 60,
+    dust: 55,
+    feelsLike: 31,
+    wind: 2.0,
+    rainProb: 15,
   },
 ]

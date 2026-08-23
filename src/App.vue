@@ -55,7 +55,7 @@ const subMenu = [{ to: '/troubleshooting', label: '트러블슈팅' }]
         <div class="brand-text">
           <h1 class="brand-title">날씨 대시보드</h1>
           <p class="brand-desc">
-            OpenWeatherMap 실측 데이터로 도시 6곳의 날씨 · 미세먼지 · 생활지수를 본다
+            OpenWeatherMap 실측 데이터로 도시 7곳의 날씨 · 미세먼지 · 생활지수를 본다
           </p>
         </div>
       </div>

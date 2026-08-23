@@ -13,6 +13,7 @@ export const cities = [
   { id: 'city_04', name: '제주', lat: 33.4996, lon: 126.5312, timezone: 'Asia/Seoul' },
   { id: 'city_05', name: '강릉', lat: 37.7519, lon: 128.8761, timezone: 'Asia/Seoul' },
   { id: 'city_06', name: '대구', lat: 35.8714, lon: 128.6014, timezone: 'Asia/Seoul' },
+  { id: 'city_07', name: '광주', lat: 35.1595, lon: 126.8526, timezone: 'Asia/Seoul' },
 ]
 
 // id 로 도시 하나를 찾는다. 상세 페이지가 route.params.cityId 로 부른다.
