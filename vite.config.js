@@ -76,10 +76,22 @@ export default defineConfig(({ mode }) => {
               return 'vendor-vue'
             }
             if (/\/node_modules\/(axios|dayjs|@vueuse)\//.test(path)) return 'vendor-utils'
-            // 과제 9. echarts 는 따로 뺀다. 통계 화면에서만 쓰는데, vendor-utils 에 섞이면
-            // 첫 화면(대시보드)이 차트 코드까지 같이 내려받게 된다.
-            // 라우트가 이미 지연 로딩이라(router/index.js), 이 청크는 /weather/stats 에 들어갈 때 처음 받는다.
-            if (/\/node_modules\/(echarts|zrender|vue-echarts)\//.test(path)) return 'vendor-chart'
+            // echarts 는 여기서 묶지 않는다. manualChunks 로 이름을 붙이면 그 청크가 엔트리의
+            // 정적 의존성으로 끌려 올라가서(index.html 에 modulepreload 로 박힌다), 차트를 쓰지 않는
+            // 첫 화면이 627KB(gzip 215KB)를 같이 받게 된다. 실제로 그렇게 나가고 있었다.
+            // 지금은 규칙을 두지 않고 자동 분할에 맡긴다 - 차트를 쓰는 화면이 둘 다 지연 로딩
+            // 라우트(stats / weather/:cityId)라서, 공유 청크가 그 두 화면에 들어갈 때 처음 내려간다.
+            // 아래 chunkFileNames 가 그 청크에 vendor-chart 라는 이름만 따로 붙여준다.
+          },
+          // 자동 분할이 만든 공유 청크는 "안에 들어간 모듈 중 알파벳 순으로 처음 만난 것" 에서
+          // 이름을 물려받는다. echarts 가 들어간 550KB 짜리 청크가 chartTheme-*.js 로 나오는 이유다.
+          // 위 주석의 configStore 사례와 같은 문제라, 이름만 실제 내용에 맞게 바로잡는다.
+          chunkFileNames(chunkInfo) {
+            // moduleIds 는 배열이다(객체가 아니다). Object.keys 로 읽으면 경로가 아니라 인덱스가 나온다.
+            const hasChart = (chunkInfo.moduleIds ?? []).some((id) =>
+              /[\\/]node_modules[\\/](echarts|zrender|vue-echarts)[\\/]/.test(id),
+            )
+            return hasChart ? 'assets/vendor-chart-[hash].js' : 'assets/[name]-[hash].js'
           },
         },
       },
